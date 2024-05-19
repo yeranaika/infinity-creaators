@@ -1,40 +1,43 @@
-import pygame 
+import pygame
+import sys
 from configuraciones import *
-from elemntos import * 
-from player import *
+from elementos import *
+from player import Player, VSortCameraGroup
 from debug import *
 
-class nivel:
+class Nivel:
     def __init__(self):
-
         # Llamar superficie de visualización
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
+        # Fondo del nivel
+        self.backgroundlevel = pygame.image.load("juego_rol/texturas/background-level/level-1/background.png").convert_alpha()
         self.llamar_vizua = pygame.display.get_surface()
 
-        # Grupo para mostrar en pantalla
-        self.visible_sprites = VSortCameraGroup()
+        # Grupos para mostrar en pantalla
+        self.visible_sprites = VSortCameraGroup(self.backgroundlevel)
         self.obstaculos_sprites = pygame.sprite.Group()
         
-        #setear vector a la camara
+        # Vector de la cámara
         self.camera = pygame.math.Vector2(0, 0)
 
-        #crea el mapa df
+        # Crear el mapa
         self.creacion_mapa()
 
     def creacion_mapa(self):
-        # Recorredor de lista del mapa 
-        # Recorre las listas creadas para hacer el diseño del mapa 
+        # Recorrer la lista del mapa
         for fila_ind, fila in enumerate(MAP_MUNDO):
             for columnas_ind, columna in enumerate(fila):
                 x = columnas_ind * TA_MOSAICO
                 y = fila_ind * TA_MOSAICO
-                # Donde se pondrá la piedra
-                if columna == "x":
-                    piedra((x,y), [self.visible_sprites, self.obstaculos_sprites])
-                if columna == "p" :
-                    self.player = player((x,y), [self.visible_sprites])
 
-    #funcion de run general de las funciones 
+                # Crear piedra
+                if columna == "x":
+                    Piedra((x, y), [self.visible_sprites, self.obstaculos_sprites])
+
+                # Crear jugador
+                if columna == "p":
+                    self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites)
+
     def run(self):
         while True:
             for evento in pygame.event.get():
@@ -42,33 +45,18 @@ class nivel:
                     pygame.quit()
                     sys.exit()
                     
-            self.player.entrada()  # Llama al método entrada del jugador para procesar la entrada del usuario
-            self.player.actualizar()  # Llama al método actualizar del jugador para actualizar su posición
+            self.player.entrada()
+            self.player.actualizar()
 
-            # Ajustar la cámara para que siga al jugador
+            # Ajustar cámara para seguir al jugador
             self.ajustar_camara()
+            self.visible_sprites.dibujado_personalizado(self.camera)
 
-            self.visible_sprites.dibujado_personalizado()
-
-            self.pantalla.fill((255, 255, 255))
-
-            # Dibujar los sprites ajustando su posición según la cámara
-            self.dibujar_sprites()
-
-            self.visible_sprites.update()
-            self.player.coliciones(self.obstaculos_sprites)
-            pygame.display.update()  # Actualizar la pantalla
+            # Actualizar pantalla
+            pygame.display.update()
             debug(self.player.rect.x)
 
     def ajustar_camara(self):
         # Calcular la posición de la cámara basada en la posición del jugador
-        self.camera.x = -self.player.rect.centerx + ANCHO / 2
-        self.camera.y = -self.player.rect.centery + ALTURA / 2
-
-    def dibujar_sprites(self):
-        # Dibujar los sprites ajustando su posición según la cámara
-        for sprite in self.visible_sprites:
-            self.pantalla.blit(sprite.image, sprite.rect.move(self.camera))
-
-
-                    
+        self.camera.x = self.player.rect.centerx - ANCHO / 2
+        self.camera.y = self.player.rect.centery - ALTURA / 2
