@@ -60,3 +60,22 @@ class Nivel:
         # Calcular la posición de la cámara basada en la posición del jugador
         self.camera.x = self.player.rect.centerx - ANCHO / 2
         self.camera.y = self.player.rect.centery - ALTURA / 2
+
+class VSortCameraGroup(pygame.sprite.Group):
+    def __init__(self, background):
+        super().__init__()
+        self.llamar_vizua = pygame.display.get_surface()
+        self.background = background
+
+    def dibujado_personalizado(self, camera):
+
+        # Rellenar el área exterior del mapa con un color (por ejemplo, negro)
+        self.llamar_vizua.fill((0, 0, 0))
+        
+        # Dibujar el fondo ajustado a la cámara
+        background_rect = self.background.get_rect(topleft=(-camera.x, -camera.y))
+        self.llamar_vizua.blit(self.background, background_rect)
+
+        for sprite in sorted(self.sprites(), key=lambda sprite: sprite.rect.centery):
+            adjusted_rect = sprite.rect.move(-camera.x, -camera.y)
+            self.llamar_vizua.blit(sprite.image, adjusted_rect)

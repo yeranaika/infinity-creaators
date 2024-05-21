@@ -19,7 +19,7 @@ class Player(pygame.sprite.Sprite):
         # Animación
         self.current_animation = 'down'
         self.animation_index = 0
-        self.animation_speed = 0.5
+        self.animation_speed = 0.1
         self.moving = False
 
         # Grupo de colisiones
