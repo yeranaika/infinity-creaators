@@ -6,10 +6,10 @@ class Player(pygame.sprite.Sprite):
         super().__init__(groups)
         # Cargar las imágenes de las animaciones
         self.animations = {
-            'up': self.load_images("juego_rol/texturas/animaciones per/player_arriba.png"),
-            'down': self.load_images("juego_rol/texturas/animaciones per/player_abajo.png"),
-            'left': self.load_images("juego_rol/texturas/animaciones per/player_izquierda.png"),
-            'right': self.load_images("juego_rol/texturas/animaciones per/player_derecha.png")
+            'up': self.load_images("juego_rol/texturas/animaciones per/player_arribav2-sheet.png"),
+            'down': self.load_images("juego_rol/texturas/animaciones per/player_abajov2-sheet.png"),
+            'left': self.load_images("juego_rol/texturas/animaciones per/player_izquierdav2-sheet.png"),
+            'right': self.load_images("juego_rol/texturas/animaciones per/player_derechav2-sheet.png")
         }
         self.image = self.animations['down'][0]  # Imagen inicial
         self.rect = self.image.get_rect(topleft=pos)
@@ -19,7 +19,7 @@ class Player(pygame.sprite.Sprite):
         # Animación
         self.current_animation = 'down'
         self.animation_index = 0
-        self.animation_speed = 0.1
+        self.animation_speed = 0.05
         self.moving = False
 
         # Grupo de colisiones

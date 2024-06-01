@@ -16,7 +16,7 @@ class Juego:
         self.nivel = Nivel()
 
     def run(self):
-        # Bucle principal
+        # Bucle dprincipal
         while True:
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
