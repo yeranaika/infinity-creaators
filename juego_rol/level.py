@@ -16,7 +16,8 @@ class Nivel:
         # Grupos para mostrar en pantalla
         self.visible_sprites = VSortCameraGroup(self.backgroundlevel)
         self.obstaculos_sprites = pygame.sprite.Group()
-        
+        self.attack_sprites = pygame.sprite.Group()  # Grupo para los ataques
+
         # Vector de la cámara
         self.camera = pygame.math.Vector2(0, 0)
 
@@ -36,7 +37,7 @@ class Nivel:
 
                 # Crear jugador
                 if columna == "p":
-                    self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites)
+                    self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites, self.attack_sprites)  # Pasar el grupo de ataques
 
     def run(self):
         while True:
@@ -44,13 +45,17 @@ class Nivel:
                 if evento.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                    
+
             self.player.entrada()
             self.player.actualizar()
+            self.attack_sprites.update()
 
             # Ajustar cámara para seguir al jugador
             self.ajustar_camara()
             self.visible_sprites.dibujado_personalizado(self.camera)
+
+            # Dibujar jugador y ataque
+            self.visible_sprites.draw(self.pantalla)
 
             # Actualizar pantalla
             pygame.display.update()
@@ -68,7 +73,6 @@ class VSortCameraGroup(pygame.sprite.Group):
         self.background = background
 
     def dibujado_personalizado(self, camera):
-
         # Rellenar el área exterior del mapa con un color (por ejemplo, negro)
         self.llamar_vizua.fill((0, 0, 0))
         
