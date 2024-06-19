@@ -2,7 +2,7 @@ import pygame
 import sys
 from configuraciones import *
 from elementos import Piedra
-from player import Player
+from player import Player, Attack
 from enemigos import Enemy
 from debug import debug
 

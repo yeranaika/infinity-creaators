@@ -1,5 +1,6 @@
 import pygame
 from configuraciones import *
+from enemigos import *
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, obstacle_sprites, attack_sprites):
@@ -14,7 +15,9 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-10, -10)
         self.direction = pygame.math.Vector2()
-        self.speed = 1
+        self.speed = 2
+        self.run_speed = 4
+        self.current_speed = self.speed
 
         self.current_animation = 'down'
         self.animation_index = 0
@@ -29,7 +32,7 @@ class Player(pygame.sprite.Sprite):
         }
         self.is_attacking = False
         self.attack_frame_index = 0
-        self.attack_animation_speed = 0.1  # Ajustar esta velocidad para hacer la animación más lenta
+        self.attack_animation_speed = 0.09
         self.attack_sprites = attack_sprites
 
         self.obstacle_sprites = obstacle_sprites
@@ -58,6 +61,11 @@ class Player(pygame.sprite.Sprite):
             self.is_attacking = True
             self.attack_frame_index = 0
             self.crear_ataque()
+
+        if teclas[pygame.K_LSHIFT]:  # Si se presiona la tecla Shift izquierda, corre
+            self.current_speed = self.run_speed
+        else:
+            self.current_speed = self.speed
 
         if not self.is_attacking:
             if teclas[pygame.K_w]:
@@ -100,10 +108,10 @@ class Player(pygame.sprite.Sprite):
         if self.direction.magnitude() != 0:
             self.direction = self.direction.normalize()
 
-        self.hitbox.x += self.direction.x * self.speed
+        self.hitbox.x += self.direction.x * self.current_speed
         self.colisiones('horizontal')
 
-        self.hitbox.y += self.direction.y * self.speed
+        self.hitbox.y += self.direction.y * self.current_speed
         self.colisiones('vertical')
 
         self.rect.center = self.hitbox.center
@@ -147,11 +155,12 @@ class Attack(pygame.sprite.Sprite):
         super().__init__(groups)
         self.frames = animation_frames
         self.frame_index = 0
-        self.animation_speed = animation_speed  # Reducir la velocidad de la animación de ataque
+        self.animation_speed = animation_speed
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(center=pos)
         self.direction = direction
-        self.lifetime = len(self.frames) * 10  # Ajustar la duración del ataque para que sea más visible
+        self.lifetime = len(self.frames) * 10
+        self.hitbox = self.rect.inflate(-10, -10)
 
     def update(self):
         self.frame_index += self.animation_speed
@@ -161,4 +170,43 @@ class Attack(pygame.sprite.Sprite):
 
         self.lifetime -= 1
         if self.lifetime <= 0:
-            self.kill()  # Eliminar el sprite del grupo una vez que la animación termine
+            self.kill()
+
+        # Detectar colisiones con enemigos
+        if self.groups():
+            for group in self.groups():
+                for enemy in group:
+                    if isinstance(enemy, Enemy) and self.hitbox.colliderect(enemy.hitbox):
+                        enemy.recibir_daño(50)  # Ajustar el daño según sea necesario
+                        self.kill()  # Eliminar el ataque después de causar daño
+
+
+class Attack(pygame.sprite.Sprite):
+    def __init__(self, pos, direction, groups, animation_frames, animation_speed):
+        super().__init__(groups)
+        self.frames = animation_frames
+        self.frame_index = 0
+        self.animation_speed = animation_speed
+        self.image = self.frames[self.frame_index]
+        self.rect = self.image.get_rect(center=pos)
+        self.direction = direction
+        self.lifetime = len(self.frames) * 10
+        self.hitbox = self.rect.inflate(-10, -10)
+
+    def update(self):
+        self.frame_index += self.animation_speed
+        if self.frame_index >= len(self.frames):
+            self.frame_index = 0
+        self.image = self.frames[int(self.frame_index)]
+
+        self.lifetime -= 1
+        if self.lifetime <= 0:
+            self.kill()
+
+        # Detectar colisiones con enemigos
+        if self.groups():
+            for group in self.groups():
+                for enemy in group:
+                    if isinstance(enemy, Enemy) and self.hitbox.colliderect(enemy.hitbox):
+                        enemy.recibir_daño(50)  # Ajustar el daño según sea necesario
+                        self.kill()  # Eliminar el ataque después de causar daño

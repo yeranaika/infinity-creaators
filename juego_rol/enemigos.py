@@ -14,7 +14,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=pos)
         self.direction = pygame.math.Vector2()
         self.speed = 1
-        self.salud = 100
+        self.salud = 30
 
         self.current_animation = 'down'
         self.animation_index = 0
@@ -33,33 +33,32 @@ class Enemy(pygame.sprite.Sprite):
             frames.append(frame)
         return frames
 
-    def mover(self):
-        # Lógica para seguir al jugador
+    def move_towards_player(self):
         player_vector = pygame.math.Vector2(self.player.rect.center)
         enemy_vector = pygame.math.Vector2(self.rect.center)
-        self.direction = (player_vector - enemy_vector).normalize()
+        distance_to_player = player_vector - enemy_vector
+        if distance_to_player.length() > 0:
+            if distance_to_player.length() < 200:  # Rango en el que el enemigo empieza a moverse hacia el jugador
+                self.direction = distance_to_player.normalize()
+                self.hitbox.x += self.direction.x * self.speed
+                self.collision('horizontal')
+                self.hitbox.y += self.direction.y * self.speed
+                self.collision('vertical')
+                self.rect.center = self.hitbox.center
 
-        self.rect.x += self.direction.x * self.speed
-        self.colisiones('horizontal')
-
-        self.rect.y += self.direction.y * self.speed
-        self.colisiones('vertical')
-
-        self.hitbox.center = self.rect.center
-
-    def colisiones(self, direccion):
+    def collision(self, direction):
         for sprite in self.obstacle_sprites:
-            if sprite.rect.colliderect(self.rect):
-                if direccion == 'horizontal':
+            if sprite.rect.colliderect(self.hitbox):
+                if direction == 'horizontal':
                     if self.direction.x > 0:
-                        self.rect.right = sprite.rect.left
+                        self.hitbox.right = sprite.rect.left
                     if self.direction.x < 0:
-                        self.rect.left = sprite.rect.right
-                if direccion == 'vertical':
+                        self.hitbox.left = sprite.rect.right
+                if direction == 'vertical':
                     if self.direction.y > 0:
-                        self.rect.bottom = sprite.rect.top
+                        self.hitbox.bottom = sprite.rect.top
                     if self.direction.y < 0:
-                        self.rect.top = sprite.rect.bottom
+                        self.hitbox.top = sprite.rect.bottom
 
     def recibir_daño(self, cantidad):
         self.salud -= cantidad
@@ -72,6 +71,6 @@ class Enemy(pygame.sprite.Sprite):
             self.animation_index = 0
         self.image = self.animations[self.current_animation][int(self.animation_index)]
 
-    def actualizar(self):
-        self.mover()
+    def update(self):
+        self.move_towards_player()
         self.animar()
