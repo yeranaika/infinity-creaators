@@ -16,8 +16,7 @@ pygame.display.set_caption("Inicio de Sesión")
 BLANCO = (255, 255, 255)
 NEGRO = (0, 0, 0)
 AZUL = (0, 0, 255)
-GRIS_CLARO = (200, 200, 200)
-GRIS_OSCURO = (100, 100, 100)
+GRIS_CLARO = (200, 200, 200) 
 
 # Fuentes
 fuente = pygame.font.Font(None, 36)
@@ -42,8 +41,8 @@ def login():
     input_box2 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 300, 300, 40)
     boton_login = pygame.Rect(ANCHO // 2 - 50, 400, 100, 50)
     boton_registro = pygame.Rect(ANCHO // 2 - 100, 460, 200, 50)
-    color_inactivo = NEGRO
-    color_activo = AZUL
+    color_inactivo = BLANCO
+    color_activo = NEGRO
     color1 = color_inactivo
     color2 = color_inactivo
     activo1 = False
@@ -51,6 +50,11 @@ def login():
     usuario = ''
     contrasena = ''
     mensaje = ''
+
+    #linea teclado valores 
+    cursor_visible = True
+    cursor_timer = 0
+    cursor_interval = 500  # Milisegundos
 
     while True:
         for evento in pygame.event.get():
@@ -106,7 +110,7 @@ def login():
         # Dibujar etiquetas
         dibujar_texto('Usuario:', fuente, NEGRO, pantalla, ANCHO // 2 - 180, 200)
         dibujar_texto('Contraseña:', fuente, NEGRO, pantalla, ANCHO // 2 - 180, 300)
-        dibujar_texto(mensaje, fuente_pequena, AZUL, pantalla, ANCHO // 2 - 100, 500)
+        dibujar_texto(mensaje, fuente_pequena, NEGRO, pantalla, ANCHO // 2 - 100, 600)
 
         # Renderizar cajas de texto
         txt_surface1 = fuente.render(usuario, True, color1)
@@ -122,12 +126,32 @@ def login():
         pygame.draw.rect(pantalla, color1, input_box1, 2)
         pygame.draw.rect(pantalla, color2, input_box2, 2)
 
+        # Dibujar la barra parpadeante
+        cursor_timer += reloj.get_time()
+        if cursor_timer >= cursor_interval:
+            cursor_timer = 0
+            cursor_visible = not cursor_visible
+
+        if cursor_visible:
+            if activo1:
+                cursor_x = txt_surface1_rect.x + txt_surface1_rect.width + 5
+                cursor_y = txt_surface1_rect.y
+                cursor_h = txt_surface1_rect.height
+                pygame.draw.rect(pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
+            elif activo2:
+                cursor_x = txt_surface2_rect.x + txt_surface2_rect.width + 5
+                cursor_y = txt_surface2_rect.y
+                cursor_h = txt_surface2_rect.height
+                pygame.draw.rect(pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
+
+
         # Dibujar botones
         pygame.draw.rect(pantalla, AZUL, boton_login)
-        dibujar_texto('Login', fuente, BLANCO, pantalla, boton_login.x + 20, boton_login.y + 10)
+        dibujar_texto('Login', fuente, BLANCO, pantalla, boton_login.x + 17, boton_login.y + 10)
 
         pygame.draw.rect(pantalla, AZUL, boton_registro)
-        dibujar_texto('Registrarse', fuente_pequena, BLANCO, pantalla, boton_registro.x + 20, boton_registro.y + 10)
+        dibujar_texto('Registrarse', fuente, BLANCO, pantalla, boton_registro.x + 28, boton_registro.y + 10)
+
 
         pygame.display.flip()
         reloj.tick(30)
@@ -137,8 +161,8 @@ def registro():
     offset_x = -10  # Ajuste de posición horizontal para las cajas de entrada
     input_box1 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 200, 300, 40)
     input_box2 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 300, 300, 40)
-    boton_registro = pygame.Rect(ANCHO // 2 - 50, 400, 100, 50)
-    boton_volver = pygame.Rect(ANCHO // 2 - 50, 460, 100, 50)
+    boton_registro = pygame.Rect(ANCHO // 2 - 50, 400, 150, 50)
+    boton_volver = pygame.Rect(ANCHO // 2 - 50, 460, 150, 50)
     color_inactivo = NEGRO
     color_activo = AZUL
     color1 = color_inactivo
@@ -148,6 +172,11 @@ def registro():
     usuario = ''
     contrasena = ''
     mensaje = ''
+
+    #linea teclado valores 
+    cursor_visible = True
+    cursor_timer = 0
+    cursor_interval = 500  # Milisegundos
 
     while True:
         for evento in pygame.event.get():
@@ -193,6 +222,8 @@ def registro():
         # Dibujar etiquetas
         dibujar_texto('Nuevo Usuario:', fuente, NEGRO, pantalla, ANCHO // 2 - 250, 200)
         dibujar_texto('Nueva Contraseña:', fuente, NEGRO, pantalla, ANCHO // 2 - 250, 300)
+
+        #mensjae de prueba
         dibujar_texto(mensaje, fuente_pequena, AZUL, pantalla, ANCHO // 2 - 100, 500)
 
         # Renderizar cajas de texto
@@ -208,6 +239,25 @@ def registro():
 
         pygame.draw.rect(pantalla, color1, input_box1, 2)
         pygame.draw.rect(pantalla, color2, input_box2, 2)
+
+         # Dibujar la barra parpadeante
+        cursor_timer += reloj.get_time()
+        if cursor_timer >= cursor_interval:
+            cursor_timer = 0
+            cursor_visible = not cursor_visible
+
+        if cursor_visible:
+            if activo1:
+                cursor_x = txt_surface1_rect.x + txt_surface1_rect.width + 5
+                cursor_y = txt_surface1_rect.y
+                cursor_h = txt_surface1_rect.height
+                pygame.draw.rect(pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
+            elif activo2:
+                cursor_x = txt_surface2_rect.x + txt_surface2_rect.width + 5
+                cursor_y = txt_surface2_rect.y
+                cursor_h = txt_surface2_rect.height
+                pygame.draw.rect(pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
+
 
         # Dibujar botones
         pygame.draw.rect(pantalla, AZUL, boton_registro)
