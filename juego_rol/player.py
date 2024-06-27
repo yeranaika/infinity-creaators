@@ -1,6 +1,6 @@
 import pygame
 from configuraciones import *
-from enemigos import *
+from enemigos import Enemy
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites):
@@ -15,13 +15,13 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-10, -10)
         self.direction = pygame.math.Vector2()
-        self.speed = 5
+        self.speed = 3
         self.run_speed = 8
         self.current_speed = self.speed
 
         self.current_animation = 'down'
         self.animation_index = 0
-        self.animation_speed = 0.1
+        self.animation_speed = 4
         self.moving = False
 
         self.attack_animations = {
@@ -34,11 +34,17 @@ class Player(pygame.sprite.Sprite):
         self.attack_frame_index = 0
         self.attack_animation_speed = 0.8
         self.attack_sprites = attack_sprites
-        self.attack_delay = 5  # Duración del ataque en milisegundos
+        self.attack_delay = 180  # Duración del ataque en milisegundos
         self.last_attack_time = 0  # Momento del último ataque
 
-        self.obstacle_sprites = obstacle_sprites
         self.power_sprites = power_sprites
+        self.power_cooldown = 500 # Cooldown del poder en milisegundos
+        self.last_power_time = 0  # Momento del último poder
+
+        self.obstacle_sprites = obstacle_sprites
+
+        self.salud = 150
+        self.max_salud = 150
 
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
@@ -66,9 +72,13 @@ class Player(pygame.sprite.Sprite):
                     self.crear_ataque()
                     self.last_attack_time = current_time
             elif evento.key == pygame.K_LSHIFT:
+                self.animation_speed = 0.2
                 self.current_speed = self.run_speed
             elif evento.key == pygame.K_k:  # Tecla para el ataque de poder
-                self.crear_poder()
+                current_time = pygame.time.get_ticks()
+                if current_time - self.last_power_time >= self.power_cooldown:
+                    self.crear_poder()
+                    self.last_power_time = current_time
         elif evento.type == pygame.KEYUP:
             if evento.key == pygame.K_LSHIFT:
                 self.current_speed = self.speed
@@ -114,19 +124,48 @@ class Player(pygame.sprite.Sprite):
         attack_position = self.rect.center + offset
         Attack(attack_position, self.direction, [self.attack_sprites, self.groups()[0]], self.attack_animations[self.current_animation], self.attack_animation_speed)
 
+    def dibujar_cooldown_atk(self, pantalla, x, y):
+        current_time = pygame.time.get_ticks()
+        time_left = max(0, (self.attack_delay - (current_time - self.last_attack_time)) / 1000)
+        cooldown_text = f"{time_left:.1f}"
+        font = pygame.font.Font(None, 36)
+        text_surface = font.render(cooldown_text, True, (255, 255, 255))
+        pantalla.blit(text_surface, (x + 30, y + 0))
+        
+        attack_rect = pygame.Rect(x, y, 20, 20)
+        pygame.draw.rect(pantalla, (255, 255, 255), attack_rect)
+
     def crear_poder(self):
         offset = pygame.math.Vector2(0, 0)
+        direction = pygame.math.Vector2(0, 0)
+
         if self.current_animation == 'up':
             offset = pygame.math.Vector2(0, -32)
+            direction = pygame.math.Vector2(0, -1)
         elif self.current_animation == 'down':
             offset = pygame.math.Vector2(0, 32)
+            direction = pygame.math.Vector2(0, 1)
         elif self.current_animation == 'left':
             offset = pygame.math.Vector2(-32, 0)
+            direction = pygame.math.Vector2(-1, 0)
         elif self.current_animation == 'right':
             offset = pygame.math.Vector2(32, 0)
+            direction = pygame.math.Vector2(1, 0)
+
+        poder_position = self.rect.center + offset
+        Fireball(poder_position, direction, [self.power_sprites, self.groups()[0]])
+
+    #UI del poder
+    def dibujar_cooldownPW(self, pantalla, x, y):
+        current_time = pygame.time.get_ticks()
+        time_left = max(0, (self.power_cooldown - (current_time - self.last_power_time)) / 1000)
+        cooldown_text = f"{time_left:.1f}"
+        font = pygame.font.Font(None, 36)
+        text_surface = font.render(cooldown_text, True, (255, 255, 255))
+        pantalla.blit(text_surface, (x + 30, y + 0))
         
-        power_position = self.rect.center + offset
-        Poder(power_position, self.direction, [self.power_sprites, self.groups()[0]])
+        power_rect = pygame.Rect(x, y, 20, 20)
+        pygame.draw.rect(pantalla, (255, 0, 0), power_rect)
 
     def mover(self):
         if self.direction.magnitude() != 0:
@@ -168,11 +207,36 @@ class Player(pygame.sprite.Sprite):
             self.animation_index = 0
         self.image = self.animations[self.current_animation][int(self.animation_index)]
 
+    def recibir_daño(self, cantidad):
+        self.salud -= cantidad
+        if self.salud <= 0:
+            self.kill()
+
+    def dibujar_barra_vida(self, pantalla, camera):
+        ancho_barra = 100
+        alto_barra = 5
+        x_barra = self.rect.centerx - ancho_barra // 2 - camera.x
+        y_barra = self.rect.top - 10 - camera.y
+        barra_vida_fondo = pygame.Rect(x_barra, y_barra, ancho_barra, alto_barra)
+        barra_vida_actual = pygame.Rect(x_barra + 1, y_barra + 1, int(ancho_barra * (self.salud / self.max_salud)) - 2, alto_barra - 2)
+
+        # Dibujar borde negro
+        pygame.draw.rect(pantalla, (0, 0, 0), barra_vida_fondo)
+        # Dibujar barra de vida verde
+        pygame.draw.rect(pantalla, (0, 255, 0), barra_vida_actual)
+
     def actualizar(self):
         self.entrada()
         if not self.is_attacking:
             self.mover()
         self.animar()
+        self.check_collisions_with_enemies()
+
+    def check_collisions_with_enemies(self):
+        for sprite in self.groups()[0]:  # Asumiendo que los enemigos están en el mismo grupo que el jugador
+            if isinstance(sprite, Enemy) and self.rect.colliderect(sprite.rect):
+                sprite.attack_player(self)
+
 
 class Attack(pygame.sprite.Sprite):
     def __init__(self, pos, direction, groups, animation_frames, animation_speed):
@@ -200,23 +264,25 @@ class Attack(pygame.sprite.Sprite):
         for group in self.groups():
             for enemy in group:
                 if isinstance(enemy, Enemy) and self.hitbox.colliderect(enemy.hitbox):
-                    enemy.recibir_daño(50)  # Ajustar el daño según sea necesario
-                    self.kill()  # Eliminar el ataque después de causar daño
+                    enemy.recibir_daño(10)  # Ajustar el daño según sea necesario
+                    # self.kill()  # Eliminar el ataque después de causar daño
+                    self.frame_index = 0  # Reiniciar la animación del ataque
 
-class Poder(pygame.sprite.Sprite):
+class Fireball(pygame.sprite.Sprite):
     def __init__(self, pos, direction, groups):
         super().__init__(groups)
         self.image = pygame.Surface((20, 20))
-        self.image.fill((255, 255, 255))  # Color blanco para el poder temporal
+        self.image.fill((255, 0, 0))
         self.rect = self.image.get_rect(center=pos)
-        self.direction = direction
-        self.speed = 15
-        self.lifetime = 80  # Duración del poder en frames
+        self.direction = direction.normalize()
+        self.speed = 18
         self.hitbox = self.rect.inflate(-10, -10)
+        self.lifetime = 120  # Duración de la bola de fuego en frames
 
     def update(self):
         self.rect.x += self.direction.x * self.speed
         self.rect.y += self.direction.y * self.speed
+        self.hitbox.center = self.rect.center
 
         self.lifetime -= 1
         if self.lifetime <= 0:
@@ -226,5 +292,5 @@ class Poder(pygame.sprite.Sprite):
         for group in self.groups():
             for enemy in group:
                 if isinstance(enemy, Enemy) and self.hitbox.colliderect(enemy.hitbox):
-                    enemy.recibir_daño(100)  # Ajustar el daño según sea necesario
-                    self.kill()  # Eliminar el poder después de causar daño
+                    enemy.recibir_daño(20)  # Ajustar el daño según sea necesario
+                    self.kill()  # Eliminar la bola de fuego después de causar daño

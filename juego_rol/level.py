@@ -76,8 +76,16 @@ class Nivel:
             adjusted_rect = power.rect.move(-self.camera.x, -self.camera.y)
             self.llamar_vizua.blit(power.image, adjusted_rect)
 
+        self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
+        self.player.dibujar_cooldown_atk(self.llamar_vizua,20, 20)  # Llamada sin parámetros adicionales
+        self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)  # Ajusta la posición según sea necesario
+        
+        for enemy in self.enemy_sprites:
+            enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
+
         player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
         self.llamar_vizua.blit(self.player.image, player_rect)
+
 
 class VSortCameraGroup(pygame.sprite.Group):
     def __init__(self, background):
