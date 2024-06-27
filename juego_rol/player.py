@@ -21,7 +21,7 @@ class Player(pygame.sprite.Sprite):
 
         self.current_animation = 'down'
         self.animation_index = 0
-        self.animation_speed = 4
+        self.animation_speed = 0.05
         self.moving = False
 
         self.attack_animations = {
