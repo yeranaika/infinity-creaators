@@ -6,7 +6,7 @@ from player import Player
 from enemigos import Enemy
 
 class Nivel:
-    def __init__(self):
+    def __init__(self, personaje):
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.backgroundlevel = pygame.image.load("juego_rol/texturas/background-level/level-1/background.png").convert_alpha()
         self.llamar_vizua = pygame.display.get_surface()
@@ -19,6 +19,7 @@ class Nivel:
 
         self.camera = pygame.math.Vector2(0, 0)
 
+        self.personaje = personaje
         self.creacion_mapa()
 
     def creacion_mapa(self):
@@ -31,8 +32,8 @@ class Nivel:
                     Piedra((x, y), [self.visible_sprites, self.obstaculos_sprites])
 
                 if columna == "p":
-                    self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites, self.attack_sprites, self.power_sprites)
-                
+                    self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites, self.attack_sprites, self.power_sprites, self.personaje['nombre'])
+
                 if columna == "e":
                     Enemy((x, y), [self.visible_sprites, self.enemy_sprites], self.obstaculos_sprites, self.player)
 
@@ -77,9 +78,9 @@ class Nivel:
             self.llamar_vizua.blit(power.image, adjusted_rect)
 
         self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
-        self.player.dibujar_cooldown_atk(self.llamar_vizua,20, 20)  # Llamada sin parámetros adicionales
+        self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)  # Llamada sin parámetros adicionales
         self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)  # Ajusta la posición según sea necesario
-        
+
         for enemy in self.enemy_sprites:
             enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
 

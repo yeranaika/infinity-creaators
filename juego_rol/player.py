@@ -3,8 +3,9 @@ from configuraciones import *
 from enemigos import Enemy
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites):
+    def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, nombre):
         super().__init__(groups)
+        self.nombre = nombre
         self.animations = {
             'up': self.load_images("juego_rol/texturas/animaciones per/player_arribav2-sheet.png"),
             'down': self.load_images("juego_rol/texturas/animaciones per/player_abajov2-sheet.png"),
@@ -38,7 +39,7 @@ class Player(pygame.sprite.Sprite):
         self.last_attack_time = 0  # Momento del último ataque
 
         self.power_sprites = power_sprites
-        self.power_cooldown = 500 # Cooldown del poder en milisegundos
+        self.power_cooldown = 500  # Cooldown del poder en milisegundos
         self.last_power_time = 0  # Momento del último poder
 
         self.obstacle_sprites = obstacle_sprites
@@ -216,7 +217,7 @@ class Player(pygame.sprite.Sprite):
         ancho_barra = 100
         alto_barra = 5
         x_barra = self.rect.centerx - ancho_barra // 2 - camera.x
-        y_barra = self.rect.top - 10 - camera.y
+        y_barra = self.rect.top - 15 - camera.y  # Ajuste de la posición de la barra de vida
         barra_vida_fondo = pygame.Rect(x_barra, y_barra, ancho_barra, alto_barra)
         barra_vida_actual = pygame.Rect(x_barra + 1, y_barra + 1, int(ancho_barra * (self.salud / self.max_salud)) - 2, alto_barra - 2)
 
@@ -224,6 +225,12 @@ class Player(pygame.sprite.Sprite):
         pygame.draw.rect(pantalla, (0, 0, 0), barra_vida_fondo)
         # Dibujar barra de vida verde
         pygame.draw.rect(pantalla, (0, 255, 0), barra_vida_actual)
+
+        # Dibujar el nombre del jugador encima de la barra de vida
+        font = pygame.font.Font(None, 24)
+        text_surface = font.render(self.nombre, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(self.rect.centerx - camera.x, y_barra - 10))  # Ajuste de la posición del texto
+        pantalla.blit(text_surface, text_rect)
 
     def actualizar(self):
         self.entrada()
@@ -248,7 +255,7 @@ class Attack(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=pos)
         self.direction = direction
         self.lifetime = len(self.frames) * 1  # Duración en frames de la animación
-        self.hitbox = self.rect.inflate(-10, -10)
+        self.hitbox = self.rect.inflate(-35, -35)
 
     def update(self):
         self.frame_index += self.animation_speed

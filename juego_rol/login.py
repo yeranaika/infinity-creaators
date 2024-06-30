@@ -34,9 +34,9 @@ def dibujar_texto(texto, fuente, color, superficie, x, y):
     rect_texto.topleft = (x, y)
     superficie.blit(texto_obj, rect_texto)
 
-def login():
+def login(juego, evento):
     reloj = pygame.time.Clock()
-    offset_x = -10  # Ajuste de posición horizontal para las cajas de entrada
+    offset_x = -10
     input_box1 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 200, 300, 40)
     input_box2 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 300, 300, 40)
     boton_login = pygame.Rect(ANCHO // 2 - 50, 400, 100, 50)
@@ -51,12 +51,11 @@ def login():
     contrasena = ''
     mensaje = ''
 
-    #linea teclado valores 
     cursor_visible = True
     cursor_timer = 0
-    cursor_interval = 500  # Milisegundos
+    cursor_interval = 500
 
-    while True:
+    while juego.estado == 'login':
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -73,14 +72,13 @@ def login():
                 color1 = color_activo if activo1 else color_inactivo
                 color2 = color_activo if activo2 else color_inactivo
                 if boton_login.collidepoint(evento.pos):
-                    # Aquí puedes agregar la verificación de usuario y contraseña
-                    # if verificar_usuario(usuario, contrasena):
-                    if usuario == "admin" and contrasena == "admin":  # Ejemplo temporal
+                    if usuario == "admin" and contrasena == "admin":
                         mensaje = 'Inicio de sesión exitoso!'
+                        juego.estado = 'crear_personaje'
                     else:
                         mensaje = 'Usuario o contraseña incorrecta.'
                 if boton_registro.collidepoint(evento.pos):
-                    registro()
+                    registro(juego)
             if evento.type == pygame.KEYDOWN:
                 if activo1:
                     if evento.key == pygame.K_RETURN:
@@ -97,26 +95,20 @@ def login():
                     else:
                         contrasena += evento.unicode
                 if evento.key == pygame.K_RETURN and not (activo1 or activo2):
-                    # Aquí puedes agregar la verificación de usuario y contraseña
-                    # if verificar_usuario(usuario, contrasena):
-                    if usuario == "admin" and contrasena == "admin":  # Ejemplo temporal
+                    if usuario == "admin" and contrasena == "admin":
                         mensaje = 'Inicio de sesión exitoso!'
+                        juego.estado = 'crear_personaje'
                     else:
                         mensaje = 'Usuario o contraseña incorrecta.'
 
-        # Dibujar la imagen de fondo
         pantalla.blit(imagen_fondo, (0, 0))
-        
-        # Dibujar etiquetas
         dibujar_texto('Usuario:', fuente, NEGRO, pantalla, ANCHO // 2 - 180, 200)
         dibujar_texto('Contraseña:', fuente, NEGRO, pantalla, ANCHO // 2 - 180, 300)
         dibujar_texto(mensaje, fuente_pequena, NEGRO, pantalla, ANCHO // 2 - 100, 600)
 
-        # Renderizar cajas de texto
         txt_surface1 = fuente.render(usuario, True, color1)
         txt_surface2 = fuente.render(contrasena, True, color2)
 
-        # Centrar verticalmente el texto en las cajas de texto
         txt_surface1_rect = txt_surface1.get_rect(center=(input_box1.centerx, input_box1.centery))
         txt_surface2_rect = txt_surface2.get_rect(center=(input_box2.centerx, input_box2.centery))
 
@@ -126,7 +118,6 @@ def login():
         pygame.draw.rect(pantalla, color1, input_box1, 2)
         pygame.draw.rect(pantalla, color2, input_box2, 2)
 
-        # Dibujar la barra parpadeante
         cursor_timer += reloj.get_time()
         if cursor_timer >= cursor_interval:
             cursor_timer = 0
@@ -144,21 +135,18 @@ def login():
                 cursor_h = txt_surface2_rect.height
                 pygame.draw.rect(pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
 
-
-        # Dibujar botones
         pygame.draw.rect(pantalla, AZUL, boton_login)
         dibujar_texto('Login', fuente, BLANCO, pantalla, boton_login.x + 17, boton_login.y + 10)
 
         pygame.draw.rect(pantalla, AZUL, boton_registro)
         dibujar_texto('Registrarse', fuente, BLANCO, pantalla, boton_registro.x + 28, boton_registro.y + 10)
 
-
         pygame.display.flip()
         reloj.tick(30)
 
-def registro():
+def registro(juego):
     reloj = pygame.time.Clock()
-    offset_x = -10  # Ajuste de posición horizontal para las cajas de entrada
+    offset_x = -10
     input_box1 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 200, 300, 40)
     input_box2 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 300, 300, 40)
     boton_registro = pygame.Rect(ANCHO // 2 - 50, 400, 150, 50)
@@ -173,12 +161,11 @@ def registro():
     contrasena = ''
     mensaje = ''
 
-    #linea teclado valores 
     cursor_visible = True
     cursor_timer = 0
-    cursor_interval = 500  # Milisegundos
+    cursor_interval = 500
 
-    while True:
+    while juego.estado == 'login':
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -195,11 +182,9 @@ def registro():
                 color1 = color_activo if activo1 else color_inactivo
                 color2 = color_activo if activo2 else color_inactivo
                 if boton_registro.collidepoint(evento.pos):
-                    # Aquí puedes agregar la lógica para registrar el usuario
-                    # agregar_usuario(usuario, contrasena)
                     mensaje = 'Usuario registrado!'
                 if boton_volver.collidepoint(evento.pos):
-                    login()
+                    login(juego)
             if evento.type == pygame.KEYDOWN:
                 if activo1:
                     if evento.key == pygame.K_RETURN:
@@ -216,21 +201,14 @@ def registro():
                     else:
                         contrasena += evento.unicode
 
-        # Dibujar la imagen de fondo
         pantalla.blit(imagen_fondo, (0, 0))
-
-        # Dibujar etiquetas
         dibujar_texto('Nuevo Usuario:', fuente, NEGRO, pantalla, ANCHO // 2 - 250, 200)
         dibujar_texto('Nueva Contraseña:', fuente, NEGRO, pantalla, ANCHO // 2 - 250, 300)
-
-        #mensjae de prueba
         dibujar_texto(mensaje, fuente_pequena, AZUL, pantalla, ANCHO // 2 - 100, 500)
 
-        # Renderizar cajas de texto
         txt_surface1 = fuente.render(usuario, True, color1)
         txt_surface2 = fuente.render(contrasena, True, color2)
 
-        # Centrar verticalmente el texto en las cajas de texto
         txt_surface1_rect = txt_surface1.get_rect(center=(input_box1.centerx, input_box1.centery))
         txt_surface2_rect = txt_surface2.get_rect(center=(input_box2.centerx, input_box2.centery))
 
@@ -240,7 +218,6 @@ def registro():
         pygame.draw.rect(pantalla, color1, input_box1, 2)
         pygame.draw.rect(pantalla, color2, input_box2, 2)
 
-         # Dibujar la barra parpadeante
         cursor_timer += reloj.get_time()
         if cursor_timer >= cursor_interval:
             cursor_timer = 0
@@ -258,8 +235,6 @@ def registro():
                 cursor_h = txt_surface2_rect.height
                 pygame.draw.rect(pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
 
-
-        # Dibujar botones
         pygame.draw.rect(pantalla, AZUL, boton_registro)
         dibujar_texto('Registrarse', fuente, BLANCO, pantalla, boton_registro.x + 10, boton_registro.y + 10)
 
@@ -268,6 +243,8 @@ def registro():
 
         pygame.display.flip()
         reloj.tick(30)
+
+
 
 if __name__ == '__main__':
     login()
