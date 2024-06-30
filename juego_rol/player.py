@@ -1,9 +1,9 @@
 import pygame
 from configuraciones import *
-from enemigos import Enemy
+from enemigos import Zombie
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, nombre):
+    def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, nombre):
         super().__init__(groups)
         self.nombre = nombre
         self.animations = {
@@ -39,6 +39,7 @@ class Player(pygame.sprite.Sprite):
         self.last_attack_time = 0  # Momento del último ataque
 
         self.power_sprites = power_sprites
+        self.item_sprites = item_sprites
         self.power_cooldown = 500  # Cooldown del poder en milisegundos
         self.last_power_time = 0  # Momento del último poder
 
@@ -46,6 +47,7 @@ class Player(pygame.sprite.Sprite):
 
         self.salud = 150
         self.max_salud = 150
+        self.items = []  # Lista para almacenar los objetos recogidos
 
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
@@ -80,9 +82,30 @@ class Player(pygame.sprite.Sprite):
                 if current_time - self.last_power_time >= self.power_cooldown:
                     self.crear_poder()
                     self.last_power_time = current_time
+            elif evento.key == pygame.K_q and not (pygame.key.get_mods() & pygame.KMOD_SHIFT):
+                self.recoger_objeto()
+            elif evento.key == pygame.K_q and (pygame.key.get_mods() & pygame.KMOD_SHIFT):
+                self.soltar_objeto()
         elif evento.type == pygame.KEYUP:
             if evento.key == pygame.K_LSHIFT:
                 self.current_speed = self.speed
+
+
+    def recoger_objeto(self):
+        for item in self.item_sprites:
+            if self.rect.colliderect(item.rect):
+                self.items.append(item)
+                item.kill()
+                print("Has recogido un objeto. Presiona Shift + Q para soltarlo.")
+                return
+
+    def soltar_objeto(self):
+        if self.items:
+            item = self.items.pop()
+            item.rect.topleft = self.rect.topleft
+            self.item_sprites.add(item)
+            item.add(self.groups()[0])
+            print("Has soltado un objeto.")
 
     def entrada(self):
         teclas = pygame.key.get_pressed()
@@ -210,7 +233,8 @@ class Player(pygame.sprite.Sprite):
     def recibir_daño(self, cantidad):
         self.salud -= cantidad
         if self.salud <= 0:
-            self.kill()
+            self.salud = 0
+            self.kill()  # Opcional, si quieres eliminar el sprite del jugador
 
     def dibujar_barra_vida(self, pantalla, camera):
         ancho_barra = 100
@@ -240,7 +264,7 @@ class Player(pygame.sprite.Sprite):
 
     def check_collisions_with_enemies(self):
         for sprite in self.groups()[0]:  # Asumiendo que los enemigos están en el mismo grupo que el jugador
-            if isinstance(sprite, Enemy) and self.rect.colliderect(sprite.rect):
+            if isinstance(sprite, Zombie) and self.rect.colliderect(sprite.rect):
                 sprite.attack_player(self)
 
 
@@ -269,7 +293,7 @@ class Attack(pygame.sprite.Sprite):
         # Detectar colisiones con enemigos
         for group in self.groups():
             for enemy in group:
-                if isinstance(enemy, Enemy) and self.hitbox.colliderect(enemy.hitbox):
+                if isinstance(enemy, Zombie) and self.hitbox.colliderect(enemy.hitbox):
                     enemy.recibir_daño(10)  # Ajustar el daño según sea necesario
                     # self.kill()  # Eliminar el ataque después de causar daño
                     self.frame_index = 0  # Reiniciar la animación del ataque
@@ -297,6 +321,6 @@ class Fireball(pygame.sprite.Sprite):
         # Detectar colisiones con enemigos
         for group in self.groups():
             for enemy in group:
-                if isinstance(enemy, Enemy) and self.hitbox.colliderect(enemy.hitbox):
+                if isinstance(enemy, Zombie) and self.hitbox.colliderect(enemy.hitbox):
                     enemy.recibir_daño(20)  # Ajustar el daño según sea necesario
                     self.kill()  # Eliminar la bola de fuego después de causar daño

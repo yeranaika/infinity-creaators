@@ -1,9 +1,10 @@
 import pygame
 from configuraciones import *
 
-class Enemy(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, obstacle_sprites, player):
+class Zombie(pygame.sprite.Sprite):
+    def __init__(self, pos, groups, obstacle_sprites, player, nombre):
         super().__init__(groups)
+        self.nombre = nombre
         self.animations = {
             'up': self.load_images("juego_rol/texturas/animaciones per/enemy-animated/zombie_arribav2-sheet-sheet.png"),
             'down': self.load_images("juego_rol/texturas/animaciones per/enemy-animated/zombie_abajov2-sheet-sheet.png"),
@@ -28,6 +29,7 @@ class Enemy(pygame.sprite.Sprite):
         self.last_attack_time = 0
         self.attack_delay = 160  # Delay en milisegundos entre cada ataque al jugador
 
+    #
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
         frames = []
@@ -92,6 +94,12 @@ class Enemy(pygame.sprite.Sprite):
         pygame.draw.rect(pantalla, (0, 0, 0), barra_vida_fondo)
         # Dibujar barra de vida verde
         pygame.draw.rect(pantalla, (0, 255, 0), barra_vida_actual)
+
+        # Dibujar el nombre del enemigo encima de la barra de vida
+        font = pygame.font.Font(None, 24)
+        text_surface = font.render(self.nombre, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(self.rect.centerx - camera.x, y_barra - 10))
+        pantalla.blit(text_surface, text_rect)
 
     def update(self):
         self.move_towards_player()

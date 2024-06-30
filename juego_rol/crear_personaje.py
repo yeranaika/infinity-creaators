@@ -84,14 +84,14 @@ def crear_personaje(pantalla, juego):
 
         for i, raza in enumerate(razas):
             color = (128, 128, 128) if i == raza_index else (200, 200, 200)
-            rect = pygame.Rect(200 + i * 120, 100, 100, 40)
+            rect = pygame.Rect(200 + i * 140, 100, 120, 40)
             pygame.draw.rect(pantalla, color, rect)
             texto_raza = font.render(raza, True, (0, 0, 0))
             pantalla.blit(texto_raza, (rect.x + 10, rect.y + 5))
 
         for i, clase in enumerate(clases):
             color = (128, 128, 128) if i == clase_index else (200, 200, 200)
-            rect = pygame.Rect(200 + i * 120, 200, 100, 40)
+            rect = pygame.Rect(200 + i * 140, 200, 120, 40)
             pygame.draw.rect(pantalla, color, rect)
             texto_clase = font.render(clase, True, (0, 0, 0))
             pantalla.blit(texto_clase, (rect.x + 10, rect.y + 5))
