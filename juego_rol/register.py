@@ -1,7 +1,7 @@
 import pygame
 import sys
 from configuraciones import *
-from DataBase.database import fetch_query
+from DataBase.database import execute_query
 
 # Inicializar Pygame
 pygame.init()
@@ -13,11 +13,9 @@ imagen_fondo = pygame.image.load('juego_rol/texturas/background-level/level-1/ba
 fuente = pygame.font.Font(None, 36)
 fuente_pequena = pygame.font.Font(None, 24)
 
-def verificar_usuario(usuario, contrasena):
-    query = "SELECT * FROM Cuenta WHERE usuario = %s AND contraseña = %s"
-    result = fetch_query(query, (usuario, contrasena))
-    return result
-
+def agregar_usuario(usuario, contrasena):
+    query = "INSERT INTO Cuenta (usuario, fecha_creacion, rol, contraseña) VALUES (%s, NOW(), 'Jugador', %s)"
+    execute_query(query, (usuario, contrasena))
 
 def dibujar_texto(texto, fuente, color, superficie, x, y):
     texto_obj = fuente.render(texto, True, color)
@@ -25,15 +23,15 @@ def dibujar_texto(texto, fuente, color, superficie, x, y):
     rect_texto.topleft = (x, y)
     superficie.blit(texto_obj, rect_texto)
 
-def login(juego, evento):
+def registro(juego):
     reloj = pygame.time.Clock()
     offset_x = -10
     input_box1 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 200, 300, 40)
     input_box2 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 300, 300, 40)
-    boton_login = pygame.Rect(ANCHO // 2 - 50, 400, 100, 50)
-    boton_registro = pygame.Rect(ANCHO // 2 - 100, 460, 200, 50)
-    color_inactivo = BLANCO
-    color_activo = NEGRO
+    boton_registro = pygame.Rect(ANCHO // 2 - 50, 400, 150, 50)
+    boton_volver = pygame.Rect(ANCHO // 2 - 50, 460, 150, 50)
+    color_inactivo = NEGRO
+    color_activo = AZUL
     color1 = color_inactivo
     color2 = color_inactivo
     activo1 = False
@@ -62,17 +60,12 @@ def login(juego, evento):
                     activo2 = False
                 color1 = color_activo if activo1 else color_inactivo
                 color2 = color_activo if activo2 else color_inactivo
-                if boton_login.collidepoint(evento.pos):
-                    result = verificar_usuario(usuario, contrasena)
-                    if result:
-                        mensaje = 'Inicio de sesión exitoso!'
-                        juego.estado = 'crear_personaje'
-                        juego.id_cuenta = result[0][0]
-                    else:
-                        mensaje = 'Usuario o contraseña incorrecta.'
                 if boton_registro.collidepoint(evento.pos):
-                    from register import registro
-                    registro(juego)
+                    agregar_usuario(usuario, contrasena)
+                    mensaje = 'Usuario registrado!'
+                if boton_volver.collidepoint(evento.pos):
+                    from login import login
+                    login(juego, None)
             if evento.type == pygame.KEYDOWN:
                 if activo1:
                     if evento.key == pygame.K_RETURN:
@@ -88,19 +81,11 @@ def login(juego, evento):
                         contrasena = contrasena[:-1]
                     else:
                         contrasena += evento.unicode
-                if evento.key == pygame.K_RETURN and not (activo1 or activo2):
-                    result = verificar_usuario(usuario, contrasena)
-                    if result:
-                        mensaje = 'Inicio de sesión exitoso!'
-                        juego.estado = 'crear_personaje'
-                        juego.id_cuenta = result[0][0]
-                    else:
-                        mensaje = 'Usuario o contraseña incorrecta.'
 
         juego.pantalla.blit(imagen_fondo, (0, 0))
-        dibujar_texto('Usuario:', fuente, NEGRO, juego.pantalla, ANCHO // 2 - 180, 200)
-        dibujar_texto('Contraseña:', fuente, NEGRO, juego.pantalla, ANCHO // 2 - 180, 300)
-        dibujar_texto(mensaje, fuente_pequena, NEGRO, juego.pantalla, ANCHO // 2 - 100, 600)
+        dibujar_texto('Nuevo Usuario:', fuente, NEGRO, juego.pantalla, ANCHO // 2 - 250, 200)
+        dibujar_texto('Nueva Contraseña:', fuente, NEGRO, juego.pantalla, ANCHO // 2 - 250, 300)
+        dibujar_texto(mensaje, fuente_pequena, AZUL, juego.pantalla, ANCHO // 2 - 100, 500)
 
         txt_surface1 = fuente.render(usuario, True, color1)
         txt_surface2 = fuente.render(contrasena, True, color2)
@@ -131,11 +116,11 @@ def login(juego, evento):
                 cursor_h = txt_surface2_rect.height
                 pygame.draw.rect(juego.pantalla, color_activo, (cursor_x, cursor_y, 2, cursor_h))
 
-        pygame.draw.rect(juego.pantalla, AZUL, boton_login)
-        dibujar_texto('Login', fuente, BLANCO, juego.pantalla, boton_login.x + 17, boton_login.y + 10)
-
         pygame.draw.rect(juego.pantalla, AZUL, boton_registro)
-        dibujar_texto('Registrarse', fuente, BLANCO, juego.pantalla, boton_registro.x + 28, boton_registro.y + 10)
+        dibujar_texto('Registrarse', fuente, BLANCO, juego.pantalla, boton_registro.x + 10, boton_registro.y + 10)
+
+        pygame.draw.rect(juego.pantalla, AZUL, boton_volver)
+        dibujar_texto('Volver', fuente, BLANCO, juego.pantalla, boton_volver.x + 20, boton_volver.y + 10)
 
         pygame.display.flip()
         reloj.tick(30)
@@ -144,4 +129,4 @@ if __name__ == '__main__':
     from juego import Juego
     juego = Juego()
     juego.estado = 'login'
-    login(juego, None)
+    registro(juego)

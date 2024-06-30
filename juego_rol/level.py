@@ -6,7 +6,7 @@ from player import Player
 from enemigos import Zombie
 
 class Nivel:
-    def __init__(self, personaje):
+    def __init__(self, personaje, ir_a_login_callback):
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.backgroundlevel = pygame.image.load("juego_rol/texturas/background-level/level-1/background.png").convert_alpha()
         self.llamar_vizua = pygame.display.get_surface()
@@ -21,6 +21,7 @@ class Nivel:
         self.camera = pygame.math.Vector2(0, 0)
         self.personaje = personaje
         self.muerto = False  # Añadir variable de estado para manejar la muerte
+        self.ir_a_login_callback = ir_a_login_callback  # Callback para ir al login
         self.creacion_mapa()
 
     def creacion_mapa(self):
@@ -49,12 +50,15 @@ class Nivel:
         boton_reaparecer = pygame.Rect(ANCHO // 2 - 100, ALTURA // 2 + 20, 200, 50)
         boton_menu = pygame.Rect(ANCHO // 2 - 100, ALTURA // 2 + 100, 200, 50)
 
-        pygame.draw.rect(self.pantalla, (0, 255, 0), boton_reaparecer)
-        pygame.draw.rect(self.pantalla, (255, 0, 0), boton_menu)
-
         font_boton = pygame.font.Font(None, 36)
         texto_reaparecer = font_boton.render('Reaparecer', True, (0, 0, 0))
         texto_menu = font_boton.render('Salir al menú', True, (0, 0, 0))
+
+        return boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu
+
+    def dibujar_pantalla_muerte(self, boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu):
+        pygame.draw.rect(self.pantalla, (0, 255, 0), boton_reaparecer)
+        pygame.draw.rect(self.pantalla, (255, 0, 0), boton_menu)
 
         texto_reaparecer_rect = texto_reaparecer.get_rect(center=boton_reaparecer.center)
         texto_menu_rect = texto_menu.get_rect(center=boton_menu.center)
@@ -63,7 +67,45 @@ class Nivel:
         self.pantalla.blit(texto_reaparecer, texto_reaparecer_rect)
         self.pantalla.blit(texto_menu, texto_menu_rect)
 
-        return boton_reaparecer, boton_menu
+    def manejar_eventos_muerte(self, boton_reaparecer, boton_menu):
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if evento.type == pygame.MOUSEBUTTONDOWN:
+                if boton_reaparecer.collidepoint(evento.pos):
+                    self.__init__(self.personaje, self.ir_a_login_callback)  # Reiniciar nivel
+                    return True
+                if boton_menu.collidepoint(evento.pos):
+                    # Cambiar el estado del juego a 'login'
+                    self.ir_a_login_callback()  # Llamar al callback para ir al login
+                    return True
+        return False
+
+    def mostrar_pantalla_muerte(self):
+        boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu = self.pantalla_muerte()
+        pygame.display.flip()
+
+        alpha = 0
+        fade_surface = pygame.Surface((ANCHO, ALTURA))
+        fade_surface.fill((0, 0, 0))
+
+        while alpha < 255:
+            if self.manejar_eventos_muerte(boton_reaparecer, boton_menu):
+                return
+            alpha += 5
+            fade_surface.set_alpha(alpha)
+            self.pantalla.blit(fade_surface, (0, 0))
+            self.dibujar_pantalla_muerte(boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu)
+            pygame.display.flip()
+            pygame.time.delay(30)
+
+        while True:
+            if self.manejar_eventos_muerte(boton_reaparecer, boton_menu):
+                return
+            self.pantalla.blit(fade_surface, (0, 0))
+            self.dibujar_pantalla_muerte(boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu)
+            pygame.display.flip()
 
     def manejar_eventos_muerte(self, boton_reaparecer, boton_menu):
         for evento in pygame.event.get():
@@ -72,32 +114,12 @@ class Nivel:
                 sys.exit()
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 if boton_reaparecer.collidepoint(evento.pos):
-                    self.__init__(self.personaje)  # Reiniciar nivel
+                    self.__init__(self.personaje, self.ir_a_login_callback)
                     return True
                 if boton_menu.collidepoint(evento.pos):
-                    # Lógica para volver al menú
-                    pass
+                    self.ir_a_login_callback()
+                    return True
         return False
-
-    def mostrar_pantalla_muerte(self):
-        boton_reaparecer, boton_menu = self.pantalla_muerte()
-        pygame.display.flip()
-
-        alpha = 0
-        fade_surface = pygame.Surface((ANCHO, ALTURA))
-        fade_surface.fill((0, 0, 0))
-        fade_surface.set_alpha(alpha)
-        
-        while alpha < 255:
-            if self.manejar_eventos_muerte(boton_reaparecer, boton_menu):
-                return
-            alpha += 5
-            fade_surface.set_alpha(alpha)
-            self.pantalla.blit(fade_surface, (0, 0))
-            self.pantalla.blit(self.pantalla, (0, 0))
-            self.pantalla.blit(fade_surface, (0, 0))
-            pygame.display.flip()
-            pygame.time.delay(100)
 
     def run(self):
         while True:

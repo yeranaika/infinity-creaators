@@ -24,6 +24,7 @@ class Juego:
         self.menu_mensajes = MenuMensajes()
         self.menu_pausa = MenuPausa()
         self.font = pygame.font.Font(None, 36)
+        self.id_cuenta = None  # Añadir el atributo id_cuenta
 
     def manejar_eventos(self):
         eventos = pygame.event.get()
@@ -37,7 +38,7 @@ class Juego:
                 self.personaje, listo, self.raza_index, self.clase_index, self.nombre = crear_personaje(self.pantalla, self)
                 if listo:
                     self.estado = 'juego'
-                    self.nivel = Nivel(self.personaje)
+                    self.nivel = Nivel(self.personaje, self.ir_a_login)
             elif self.estado == 'juego':
                 if evento.type == pygame.KEYDOWN:
                     if evento.key == pygame.K_ESCAPE:
@@ -61,6 +62,8 @@ class Juego:
                 pygame.display.flip()
                 self.reloj.tick(FPS)
             elif self.estado == 'juego':
+                if self.nivel is None:
+                    self.nivel = Nivel(self.personaje, self.ir_a_login)
                 if self.pausado:
                     self.menu_pausa.dibujar(self.pantalla)
                 else:
@@ -71,6 +74,11 @@ class Juego:
                         self.nivel.run()
                 pygame.display.flip()
                 self.reloj.tick(FPS)
+
+    def ir_a_login(self):
+        self.estado = 'login'
+        self.nivel = None
+        self.personaje = None
 
 if __name__ == "__main__":
     juego = Juego()
