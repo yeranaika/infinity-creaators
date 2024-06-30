@@ -5,12 +5,6 @@ from level import Nivel
 # Cargar imagen de fondo
 imagen_fondo = pygame.image.load('juego_rol/texturas/background-level/level-1/background.png')
 
-def dibujar_texto(texto, fuente, color, superficie, x, y):
-    texto_obj = fuente.render(texto, True, color)
-    rect_texto = texto_obj.get_rect()
-    rect_texto.topleft = (x, y)
-    superficie.blit(texto_obj, rect_texto)
-
 def crear_personaje(pantalla, juego):
     reloj = pygame.time.Clock()
     font = pygame.font.Font(None, 36)
@@ -33,7 +27,7 @@ def crear_personaje(pantalla, juego):
     cursor_timer = 0
     cursor_interval = 500
 
-    while juego.estado == 'crear_personaje':
+    while not listo:
         eventos = pygame.event.get()
         for evento in eventos:
             if evento.type == pygame.QUIT:
@@ -45,20 +39,28 @@ def crear_personaje(pantalla, juego):
                 else:
                     activo_nombre = False
                 color_nombre = color_activo if activo_nombre else color_inactivo
+
                 if boton_confirmar.collidepoint(evento.pos):
+                    print("Botón Confirmar clickeado")
                     if raza_index != -1 and clase_index != -1 and nombre:
+                        print("Personaje creado, cambiando a estado 'juego'")
                         listo = True
                         juego.estado = 'juego'
+                        print("juego iniciado")
                         juego.nivel = Nivel({'raza': razas[raza_index], 'clase': clases[clase_index], 'nombre': nombre})
                         return {'raza': razas[raza_index], 'clase': clases[clase_index], 'nombre': nombre}, True, raza_index, clase_index, nombre
+
                 if boton_cancelar.collidepoint(evento.pos):
+                    print("Botón Cancelar clickeado")
                     return None, False, raza_index, clase_index, nombre
+
                 for i in range(len(razas)):
-                    rect = pygame.Rect(200 + i * 300, 100, 100, 40)
+                    rect = pygame.Rect(200 + i * 120, 100, 100, 40)
                     if rect.collidepoint(evento.pos):
                         raza_index = i
+
                 for i in range(len(clases)):
-                    rect = pygame.Rect(200 + i * 300, 200, 100, 40)
+                    rect = pygame.Rect(200 + i * 120, 200, 100, 40)
                     if rect.collidepoint(evento.pos):
                         clase_index = i
 

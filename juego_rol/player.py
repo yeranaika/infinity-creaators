@@ -156,7 +156,6 @@ class Player(pygame.sprite.Sprite):
         poder_position = self.rect.center + offset
         Fireball(poder_position, direction, [self.power_sprites, self.groups()[0]])
 
-    #UI del poder
     def dibujar_cooldownPW(self, pantalla, x, y):
         current_time = pygame.time.get_ticks()
         time_left = max(0, (self.power_cooldown - (current_time - self.last_power_time)) / 1000)
