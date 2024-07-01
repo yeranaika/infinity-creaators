@@ -126,7 +126,7 @@ def registro(juego):
         reloj.tick(30)
 
 if __name__ == '__main__':
-    from juego import Juego
+    from main_app import Juego
     juego = Juego()
     juego.estado = 'login'
     registro(juego)

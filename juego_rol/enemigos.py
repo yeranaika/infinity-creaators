@@ -29,7 +29,6 @@ class Zombie(pygame.sprite.Sprite):
         self.last_attack_time = 0
         self.attack_delay = 160  # Delay en milisegundos entre cada ataque al jugador
 
-    #
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
         frames = []
@@ -69,6 +68,7 @@ class Zombie(pygame.sprite.Sprite):
         self.salud -= cantidad
         if self.salud <= 0:
             self.kill()
+            self.player.puntuacion += 50  # Incrementar la puntuación del jugador
 
     def animar(self):
         self.animation_index += self.animation_speed

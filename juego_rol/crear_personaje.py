@@ -52,14 +52,14 @@ def crear_personaje(pantalla, juego):
 
                         # Guardar el personaje en la base de datos
                         query = """
-                        INSERT INTO Personaje (id_cuenta, nombre_personaje, id_raza, id_clase, nivel, estado)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO Personaje (id_cuenta, nombre_personaje, id_raza, id_clase, nivel, estado, vida, mana, ataque, defensa, velocidad)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """
-                        params = (juego.id_cuenta, nombre, raza_index + 1, id_clase, 1, 'Vivo')
+                        params = (juego.id_cuenta, nombre, raza_index + 1, id_clase, 1, 'Vivo', 100, 50, 10, 5, 5)
                         execute_query(query, params)
                         
                         listo = True
-                        juego.estado = 'juego'
+                        juego.estado = 'seleccionar_personaje'
                         print("juego iniciado")
                         juego.nivel = Nivel({'raza': razas[raza_index], 'clase': clases[clase_index], 'nombre': nombre}, juego.ir_a_login)
                         juego.raza_index = raza_index

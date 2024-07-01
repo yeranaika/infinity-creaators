@@ -6,6 +6,7 @@ from mensajes_COM import MenuMensajes
 from menu_pausa import MenuPausa
 from crear_personaje import crear_personaje
 from login import login
+from seleccionar_personaje import seleccionar_personaje
 
 class Juego:
     def __init__(self):
@@ -24,7 +25,7 @@ class Juego:
         self.menu_mensajes = MenuMensajes()
         self.menu_pausa = MenuPausa()
         self.font = pygame.font.Font(None, 36)
-        self.id_cuenta = None  # Añadir el atributo id_cuenta
+        self.id_cuenta = None
 
     def manejar_eventos(self):
         eventos = pygame.event.get()
@@ -38,7 +39,17 @@ class Juego:
                 self.personaje, listo, self.raza_index, self.clase_index, self.nombre = crear_personaje(self.pantalla, self)
                 if listo:
                     self.estado = 'juego'
-                    self.nivel = Nivel(self.personaje, self.ir_a_login)
+                    if isinstance(self.personaje, dict):  # Validación
+                        self.nivel = Nivel(self.personaje, self.ir_a_login)
+                    else:
+                        raise TypeError("self.personaje debe ser un diccionario")
+            elif self.estado == 'seleccionar_personaje':
+                seleccionar_personaje(self)
+                if self.estado == 'juego':  # Si se cambia el estado a 'juego' después de seleccionar un personaje
+                    if isinstance(self.personaje, dict):  # Validación
+                        self.nivel = Nivel(self.personaje, self.ir_a_login)
+                    else:
+                        raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'juego':
                 if evento.type == pygame.KEYDOWN:
                     if evento.key == pygame.K_ESCAPE:
@@ -58,12 +69,15 @@ class Juego:
         while True:
             self.manejar_eventos()
 
-            if self.estado == 'login' or self.estado == 'crear_personaje':
+            if self.estado == 'login' or self.estado == 'crear_personaje' or self.estado == 'seleccionar_personaje':
                 pygame.display.flip()
                 self.reloj.tick(FPS)
             elif self.estado == 'juego':
                 if self.nivel is None:
-                    self.nivel = Nivel(self.personaje, self.ir_a_login)
+                    if isinstance(self.personaje, dict):  # Validación
+                        self.nivel = Nivel(self.personaje, self.ir_a_login)
+                    else:
+                        raise TypeError("self.personaje debe ser un diccionario")
                 if self.pausado:
                     self.menu_pausa.dibujar(self.pantalla)
                 else:

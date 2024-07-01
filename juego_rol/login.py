@@ -18,6 +18,10 @@ def verificar_usuario(usuario, contrasena):
     result = fetch_query(query, (usuario, contrasena))
     return result
 
+def verificar_personajes(id_cuenta):
+    query = "SELECT * FROM Personaje WHERE id_cuenta = %s"
+    result = fetch_query(query, (id_cuenta,))
+    return result
 
 def dibujar_texto(texto, fuente, color, superficie, x, y):
     texto_obj = fuente.render(texto, True, color)
@@ -26,6 +30,8 @@ def dibujar_texto(texto, fuente, color, superficie, x, y):
     superficie.blit(texto_obj, rect_texto)
 
 def login(juego, evento):
+    from main_app import Juego  # Importar aquí para evitar importaciones circulares
+
     reloj = pygame.time.Clock()
     offset_x = -10
     input_box1 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 200, 300, 40)
@@ -68,6 +74,11 @@ def login(juego, evento):
                         mensaje = 'Inicio de sesión exitoso!'
                         juego.estado = 'crear_personaje'
                         juego.id_cuenta = result[0][0]
+                        personajes = verificar_personajes(juego.id_cuenta)
+                        if personajes:
+                            juego.estado = 'seleccionar_personaje'
+                        else:
+                            juego.estado = 'crear_personaje'
                     else:
                         mensaje = 'Usuario o contraseña incorrecta.'
                 if boton_registro.collidepoint(evento.pos):
@@ -141,7 +152,7 @@ def login(juego, evento):
         reloj.tick(30)
 
 if __name__ == '__main__':
-    from juego import Juego
+    from main_app import Juego
     juego = Juego()
     juego.estado = 'login'
     login(juego, None)

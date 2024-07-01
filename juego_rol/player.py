@@ -1,11 +1,17 @@
 import pygame
 from configuraciones import *
 from enemigos import Zombie
+from inventory import Item, Inventory
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, nombre):
+    def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, personaje):
         super().__init__(groups)
-        self.nombre = nombre
+        # Validación del diccionario personaje
+        required_keys = ['nombre', 'velocidad', 'vida', 'mana', 'ataque', 'defensa']
+        for key in required_keys:
+            if key not in personaje:
+                raise KeyError(f"Falta la clave '{key}' en el diccionario 'personaje'")
+
         self.animations = {
             'up': self.load_images("juego_rol/texturas/animaciones per/player_arribav2-sheet.png"),
             'down': self.load_images("juego_rol/texturas/animaciones per/player_abajov2-sheet.png"),
@@ -16,8 +22,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-10, -10)
         self.direction = pygame.math.Vector2()
-        self.speed = 3
-        self.run_speed = 8
+        self.speed = personaje['velocidad']
+        self.run_speed = personaje['velocidad'] * 2
         self.current_speed = self.speed
 
         self.current_animation = 'down'
@@ -44,10 +50,16 @@ class Player(pygame.sprite.Sprite):
         self.last_power_time = 0  # Momento del último poder
 
         self.obstacle_sprites = obstacle_sprites
-
-        self.salud = 150
-        self.max_salud = 150
+        self.nombre = personaje['nombre']
+        self.salud = personaje['vida']
+        self.max_salud = personaje['vida']
+        self.mana = personaje['mana']
+        self.max_mana = personaje['mana']
+        self.ataque = personaje['ataque']
+        self.defensa = personaje['defensa']
         self.items = []  # Lista para almacenar los objetos recogidos
+        self.puntuacion = 0
+        self.inventario = Inventory()  # Inicializar el inventario del jugador
 
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
@@ -67,7 +79,13 @@ class Player(pygame.sprite.Sprite):
 
     def manejar_eventos(self, evento):
         if evento.type == pygame.KEYDOWN:
-            if evento.key == pygame.K_j and not self.is_attacking:
+            if evento.key == pygame.K_i:
+                self.mostrar_inventario()
+            elif evento.key == pygame.K_e:
+                self.equipar_objeto()
+            elif evento.key == pygame.K_u:
+                self.usar_objeto()
+            elif evento.key == pygame.K_j and not self.is_attacking:
                 current_time = pygame.time.get_ticks()
                 if current_time - self.last_attack_time >= self.attack_delay:
                     self.is_attacking = True
@@ -89,23 +107,6 @@ class Player(pygame.sprite.Sprite):
         elif evento.type == pygame.KEYUP:
             if evento.key == pygame.K_LSHIFT:
                 self.current_speed = self.speed
-
-
-    def recoger_objeto(self):
-        for item in self.item_sprites:
-            if self.rect.colliderect(item.rect):
-                self.items.append(item)
-                item.kill()
-                print("Has recogido un objeto. Presiona Shift + Q para soltarlo.")
-                return
-
-    def soltar_objeto(self):
-        if self.items:
-            item = self.items.pop()
-            item.rect.topleft = self.rect.topleft
-            self.item_sprites.add(item)
-            item.add(self.groups()[0])
-            print("Has soltado un objeto.")
 
     def entrada(self):
         teclas = pygame.key.get_pressed()
@@ -144,9 +145,9 @@ class Player(pygame.sprite.Sprite):
             offset = pygame.math.Vector2(-32, 0)
         elif self.current_animation == 'right':
             offset = pygame.math.Vector2(32, 0)
-        
+
         attack_position = self.rect.center + offset
-        Attack(attack_position, self.direction, [self.attack_sprites, self.groups()[0]], self.attack_animations[self.current_animation], self.attack_animation_speed)
+        Attack(attack_position, self.direction, [self.attack_sprites, self.groups()[0]], self.attack_animations[self.current_animation], self.attack_animation_speed, self.ataque)
 
     def dibujar_cooldown_atk(self, pantalla, x, y):
         current_time = pygame.time.get_ticks()
@@ -155,7 +156,7 @@ class Player(pygame.sprite.Sprite):
         font = pygame.font.Font(None, 36)
         text_surface = font.render(cooldown_text, True, (255, 255, 255))
         pantalla.blit(text_surface, (x + 30, y + 0))
-        
+
         attack_rect = pygame.Rect(x, y, 20, 20)
         pygame.draw.rect(pantalla, (255, 255, 255), attack_rect)
 
@@ -177,7 +178,7 @@ class Player(pygame.sprite.Sprite):
             direction = pygame.math.Vector2(1, 0)
 
         poder_position = self.rect.center + offset
-        Fireball(poder_position, direction, [self.power_sprites, self.groups()[0]])
+        Fireball(poder_position, direction, [self.power_sprites, self.groups()[0]], self.ataque)
 
     def dibujar_cooldownPW(self, pantalla, x, y):
         current_time = pygame.time.get_ticks()
@@ -186,7 +187,7 @@ class Player(pygame.sprite.Sprite):
         font = pygame.font.Font(None, 36)
         text_surface = font.render(cooldown_text, True, (255, 255, 255))
         pantalla.blit(text_surface, (x + 30, y + 0))
-        
+
         power_rect = pygame.Rect(x, y, 20, 20)
         pygame.draw.rect(pantalla, (255, 0, 0), power_rect)
 
@@ -215,6 +216,11 @@ class Player(pygame.sprite.Sprite):
                         self.hitbox.bottom = sprite.rect.top
                     if self.direction.y < 0:
                         self.hitbox.top = sprite.rect.bottom
+
+    def check_collisions_with_enemies(self):
+        for sprite in self.groups()[0]:  # Asumiendo que los enemigos están en el mismo grupo que el jugador
+            if isinstance(sprite, Zombie) and self.rect.colliderect(sprite.rect):
+                sprite.attack_player(self)
 
     def animar(self):
         if self.is_attacking:
@@ -262,14 +268,63 @@ class Player(pygame.sprite.Sprite):
         self.animar()
         self.check_collisions_with_enemies()
 
-    def check_collisions_with_enemies(self):
-        for sprite in self.groups()[0]:  # Asumiendo que los enemigos están en el mismo grupo que el jugador
-            if isinstance(sprite, Zombie) and self.rect.colliderect(sprite.rect):
-                sprite.attack_player(self)
+    def recoger_objeto(self):
+        for item in self.item_sprites:
+            if self.rect.colliderect(item.rect):
+                objeto = Item(item.nombre, item.tipo, item.modificador)
+                self.inventario.agregar_item(objeto)
+                item.kill()
+                print(f"Has recogido {item.nombre}. Presiona 'I' para abrir el inventario.")
+                return
 
+    def soltar_objeto(self):
+        if self.items:
+            item = self.items.pop()
+            item.rect.topleft = self.rect.topleft
+            self.item_sprites.add(item)
+            item.add(self.groups()[0])
+            print("Has soltado un objeto.")
+
+    def mostrar_inventario(self):
+        pantalla = pygame.display.get_surface()
+        font = pygame.font.Font(None, 36)
+        pantalla.fill((0, 0, 0))  # Fondo negro para el inventario
+
+        y_offset = 10
+        for item in self.inventario.items:
+            item_text = font.render(f"{item.nombre} ({item.tipo})", True, (255, 255, 255))
+            pantalla.blit(item_text, (10, y_offset))
+            y_offset += 40
+
+        pygame.display.flip()
+        esperando = True
+        while esperando:
+            for evento in pygame.event.get():
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_i:
+                    esperando = False
+                    break
+                elif evento.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+    def equipar_objeto(self):
+        item_idx = int(input("Ingresa el número del objeto que deseas equipar: ")) - 1
+        if 0 <= item_idx < len(self.inventario.items):
+            item = self.inventario.items[item_idx]
+            modificadores = self.inventario.equipar_item(item)
+            for stat, value in modificadores.items():
+                setattr(self, stat, getattr(self, stat) + value)
+            print(f"Has equipado {item.nombre}.")
+
+    def usar_objeto(self):
+        item_idx = int(input("Ingresa el número del objeto que deseas usar: ")) - 1
+        if 0 <= item_idx < len(self.inventario.items):
+            item = self.inventario.items[item_idx]
+            self.inventario.usar_item(item, self)
+            print(f"Has usado {item.nombre}.")
 
 class Attack(pygame.sprite.Sprite):
-    def __init__(self, pos, direction, groups, animation_frames, animation_speed):
+    def __init__(self, pos, direction, groups, animation_frames, animation_speed, ataque):
         super().__init__(groups)
         self.frames = animation_frames
         self.frame_index = 0
@@ -277,6 +332,7 @@ class Attack(pygame.sprite.Sprite):
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(center=pos)
         self.direction = direction
+        self.ataque = ataque  # Daño del ataque basado en la estadística de ataque del personaje
         self.lifetime = len(self.frames) * 1  # Duración en frames de la animación
         self.hitbox = self.rect.inflate(-35, -35)
 
@@ -294,18 +350,19 @@ class Attack(pygame.sprite.Sprite):
         for group in self.groups():
             for enemy in group:
                 if isinstance(enemy, Zombie) and self.hitbox.colliderect(enemy.hitbox):
-                    enemy.recibir_daño(10)  # Ajustar el daño según sea necesario
+                    enemy.recibir_daño(self.ataque)  # Pasar el daño del ataque al enemigo
                     # self.kill()  # Eliminar el ataque después de causar daño
                     self.frame_index = 0  # Reiniciar la animación del ataque
 
 class Fireball(pygame.sprite.Sprite):
-    def __init__(self, pos, direction, groups):
+    def __init__(self, pos, direction, groups, ataque):
         super().__init__(groups)
         self.image = pygame.Surface((20, 20))
         self.image.fill((255, 0, 0))
         self.rect = self.image.get_rect(center=pos)
         self.direction = direction.normalize()
         self.speed = 18
+        self.ataque = ataque  # Daño de la Fireball basado en la estadística de ataque del personaje
         self.hitbox = self.rect.inflate(-10, -10)
         self.lifetime = 120  # Duración de la bola de fuego en frames
 
@@ -322,5 +379,5 @@ class Fireball(pygame.sprite.Sprite):
         for group in self.groups():
             for enemy in group:
                 if isinstance(enemy, Zombie) and self.hitbox.colliderect(enemy.hitbox):
-                    enemy.recibir_daño(20)  # Ajustar el daño según sea necesario
+                    enemy.recibir_daño(self.ataque)  # Ajustar el daño según sea necesario
                     self.kill()  # Eliminar la bola de fuego después de causar daño
