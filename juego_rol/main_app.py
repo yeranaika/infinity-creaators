@@ -7,6 +7,7 @@ from menu_pausa import MenuPausa
 from crear_personaje import crear_personaje
 from login import login
 from seleccionar_personaje import seleccionar_personaje
+from consola import Consola
 
 class Juego:
     def __init__(self):
@@ -26,6 +27,7 @@ class Juego:
         self.menu_pausa = MenuPausa()
         self.font = pygame.font.Font(None, 36)
         self.id_cuenta = None
+        self.consola = Consola()
 
     def manejar_eventos(self):
         eventos = pygame.event.get()
@@ -39,21 +41,21 @@ class Juego:
                 self.personaje, listo, self.raza_index, self.clase_index, self.nombre = crear_personaje(self.pantalla, self)
                 if listo:
                     self.estado = 'juego'
-                    if isinstance(self.personaje, dict):  # Validación
+                    if isinstance(self.personaje, dict):
                         self.nivel = Nivel(self.personaje, self.ir_a_login)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'seleccionar_personaje':
                 seleccionar_personaje(self)
-                if self.estado == 'juego':  # Si se cambia el estado a 'juego' después de seleccionar un personaje
-                    if isinstance(self.personaje, dict):  # Validación
+                if self.estado == 'juego':
+                    if isinstance(self.personaje, dict):
                         self.nivel = Nivel(self.personaje, self.ir_a_login)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'juego':
                 if evento.type == pygame.KEYDOWN:
                     if evento.key == pygame.K_ESCAPE:
-                        self.pausado = not self.pausado
+                        self.pausado = not self.pausado  # Alternar estado de pausa
                     if evento.key == pygame.K_t and pygame.key.get_mods() & pygame.KMOD_CTRL:
                         self.mostrar_mensajes = not self.mostrar_mensajes
                         if self.mostrar_mensajes:
@@ -65,6 +67,28 @@ class Juego:
                 elif not self.pausado:
                     self.nivel.player.manejar_eventos(evento)
 
+    def mostrar_ventana_salir(self):
+        salir = False
+        while not salir:
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if evento.type == pygame.KEYDOWN:
+                    if evento.key == pygame.K_ESCAPE:
+                        salir = True
+                    if evento.key == pygame.K_RETURN:
+                        pygame.quit()
+                        sys.exit()
+
+            self.pantalla.fill((0, 0, 0))
+            font = pygame.font.Font(None, 74)
+            texto_salir = font.render('¿Salir del juego?', True, (255, 255, 255))
+            texto_rect = texto_salir.get_rect(center=(ANCHO // 2, ALTURA // 2 - 50))
+            self.pantalla.blit(texto_salir, texto_rect)
+            pygame.display.flip()
+            self.reloj.tick(FPS)
+
     def run(self):
         while True:
             self.manejar_eventos()
@@ -74,7 +98,7 @@ class Juego:
                 self.reloj.tick(FPS)
             elif self.estado == 'juego':
                 if self.nivel is None:
-                    if isinstance(self.personaje, dict):  # Validación
+                    if isinstance(self.personaje, dict):
                         self.nivel = Nivel(self.personaje, self.ir_a_login)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")

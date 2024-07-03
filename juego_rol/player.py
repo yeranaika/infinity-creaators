@@ -1,7 +1,7 @@
 import pygame
 from configuraciones import *
 from enemigos import Zombie
-from inventory import Item, Inventory
+import sys
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, personaje):
@@ -59,7 +59,6 @@ class Player(pygame.sprite.Sprite):
         self.defensa = personaje['defensa']
         self.items = []  # Lista para almacenar los objetos recogidos
         self.puntuacion = 0
-        self.inventario = Inventory()  # Inicializar el inventario del jugador
 
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
@@ -95,7 +94,7 @@ class Player(pygame.sprite.Sprite):
             elif evento.key == pygame.K_LSHIFT:
                 self.animation_speed = 0.2
                 self.current_speed = self.run_speed
-            elif evento.key == pygame.K_k:  # Tecla para el ataque de poder
+            elif evento.key == pygame.K_k:
                 current_time = pygame.time.get_ticks()
                 if current_time - self.last_power_time >= self.power_cooldown:
                     self.crear_poder()
@@ -271,10 +270,8 @@ class Player(pygame.sprite.Sprite):
     def recoger_objeto(self):
         for item in self.item_sprites:
             if self.rect.colliderect(item.rect):
-                objeto = Item(item.nombre, item.tipo, item.modificador)
-                self.inventario.agregar_item(objeto)
                 item.kill()
-                print(f"Has recogido {item.nombre}. Presiona 'I' para abrir el inventario.")
+                print(f"Has recogido un item. Presiona 'shift+Q' para soltar el equipo")
                 return
 
     def soltar_objeto(self):

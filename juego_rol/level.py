@@ -1,10 +1,10 @@
 import pygame
 import sys
-import random
 from configuraciones import *
 from elementos import Piedra, Objeto
 from player import Player
 from enemigos import Zombie
+from generacion_enemigos import generar_oleada, obtener_posicion_aleatoria
 
 class Nivel:
     def __init__(self, personaje, ir_a_login_callback):
@@ -21,19 +21,18 @@ class Nivel:
 
         self.camera = pygame.math.Vector2(0, 0)
         self.personaje = personaje
-        self.muerto = False  # Añadir variable de estado para manejar la muerte
-        self.ir_a_login_callback = ir_a_login_callback  # Callback para ir al login
-        self.font = pygame.font.Font(None, 36) # Agregar fuente para mostrar la puntuación
-        
-        # Oleadas Zombies
-        self.tiempo_oleada = 0  # Tiempo transcurrido desde la última oleada
-        self.intervalo_oleada = 10000  # Intervalo entre oleadas en milisegundos (10 segundos)
-        self.numero_oleada = 0  # Número de la oleada actual
-        self.zombies_por_oleada = 5  # Número de zombies en la primera oleada
+        self.muerto = False
+        self.ir_a_login_callback = ir_a_login_callback
+        self.font = pygame.font.Font(None, 36)
 
-        self.mostrar_nueva_oleada = False  # Bandera para mostrar el mensaje de nueva oleada
-        self.tiempo_nueva_oleada = 0  # Tiempo en que se mostró el mensaje de nueva oleada
-        
+        self.tiempo_oleada = 0
+        self.intervalo_oleada = 10000
+        self.numero_oleada = 0
+        self.zombies_por_oleada = 5
+
+        self.mostrar_nueva_oleada = False
+        self.tiempo_nueva_oleada = 0
+
         self.creacion_mapa()
 
     def creacion_mapa(self):
@@ -53,25 +52,6 @@ class Nivel:
 
                 if columna == "o":
                     Objeto((x, y), [self.visible_sprites, self.item_sprites])
-                    
-    # ======= Generar Oleadas Zombie ======= 
-    def generar_oleada(self):
-        self.numero_oleada += 1
-        cantidad_zombies = self.zombies_por_oleada + (5 * (self.numero_oleada - 1))
-        for _ in range(cantidad_zombies):
-            x, y = self.obtener_posicion_aleatoria()
-            Zombie((x, y), [self.visible_sprites, self.enemy_sprites], self.obstaculos_sprites, self.player, "Zombie")
-        self.tiempo_oleada = pygame.time.get_ticks()  # Reiniciar el temporizador de la oleada
-        self.mostrar_nueva_oleada = True  # Activar la bandera para mostrar el mensaje de nueva oleada
-        self.tiempo_nueva_oleada = pygame.time.get_ticks()  # Guardar el tiempo en que se muestra el mensaje
-
-    def obtener_posicion_aleatoria(self):
-        while True:
-            x = random.randint(0, ANCHO)
-            y = random.randint(0, ALTURA)
-            if not any(sprite.rect.collidepoint(x, y) for sprite in self.obstaculos_sprites):
-                return x, y
-    # ========================================== 
 
     def pantalla_muerte(self):
         font = pygame.font.Font(None, 74)
@@ -105,10 +85,10 @@ class Nivel:
                 sys.exit()
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 if boton_reaparecer.collidepoint(evento.pos):
-                    self.__init__(self.personaje, self.ir_a_login_callback)  # Reiniciar nivel
+                    self.__init__(self.personaje, self.ir_a_login_callback)
                     return True
                 if boton_menu.collidepoint(evento.pos):
-                    self.ir_a_login_callback()  # Llamar al callback para ir al login
+                    self.ir_a_login_callback()
                     return True
         return False
 
@@ -138,14 +118,14 @@ class Nivel:
             pygame.display.flip()
 
     def run(self):
-        while True:
-            if not self.muerto:
-                for evento in pygame.event.get():
-                    if evento.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-                    self.player.manejar_eventos(evento)
+        while not self.muerto:
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                self.player.manejar_eventos(evento)
 
+            if not self.muerto:
                 self.player.entrada()
                 self.player.actualizar()
                 self.enemy_sprites.update()
@@ -155,16 +135,17 @@ class Nivel:
 
                 if self.player.salud <= 0:
                     self.muerto = True
-                
-                 # Verificar si es hora de generar una nueva oleada
+
                 if pygame.time.get_ticks() - self.tiempo_oleada >= self.intervalo_oleada:
-                    self.generar_oleada()
+                    self.tiempo_oleada, self.numero_oleada = generar_oleada(self.visible_sprites, self.enemy_sprites, self.obstaculos_sprites, self.player, self.numero_oleada, self.zombies_por_oleada, ANCHO, ALTURA)
+                    self.mostrar_nueva_oleada = True
+                    self.tiempo_nueva_oleada = pygame.time.get_ticks()
 
                 self.ajustar_camara()
                 self.dibujado_personalizado()
                 pygame.display.flip()
-            else:
-                self.mostrar_pantalla_muerte()
+
+        self.mostrar_pantalla_muerte()
 
     def ajustar_camara(self):
         self.camera.x = self.player.rect.centerx - ANCHO / 2
@@ -172,7 +153,7 @@ class Nivel:
 
     def dibujado_personalizado(self):
         self.llamar_vizua.fill((0, 0, 0))
-        
+
         background_rect = self.backgroundlevel.get_rect(topleft=(-self.camera.x, -self.camera.y))
         self.llamar_vizua.blit(self.backgroundlevel, background_rect)
 
@@ -189,32 +170,27 @@ class Nivel:
             self.llamar_vizua.blit(power.image, adjusted_rect)
 
         self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
-        self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)  # Llamada sin parámetros adicionales
-        self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)  # Ajusta la posición según sea necesario
+        self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)
+        self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
 
         for enemy in self.enemy_sprites:
             enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
 
         player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
         self.llamar_vizua.blit(self.player.image, player_rect)
-        
-        # ======== Mostrar la puntuación en la pantalla ======== 
+
         puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
         self.llamar_vizua.blit(puntuacion_text, (10, 10))
-        
-        # ======== Mostrar el número de oleada en la pantalla ========
+
         oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
         self.llamar_vizua.blit(oleada_text, (10, 40))
 
-        # ======== Mostrar mensaje de nueva oleada si la bandera está activada ========
         if self.mostrar_nueva_oleada:
             nueva_oleada_text = self.font.render("¡Nueva Oleada!", True, (255, 0, 0))
             text_rect = nueva_oleada_text.get_rect(center=(ANCHO // 2, ALTURA // 2))
             self.llamar_vizua.blit(nueva_oleada_text, text_rect)
-            # Desactivar el mensaje de nueva oleada después de 3 segundos
             if pygame.time.get_ticks() - self.tiempo_nueva_oleada > 3000:
                 self.mostrar_nueva_oleada = False
-        # ========================
 
 class VSortCameraGroup(pygame.sprite.Group):
     def __init__(self, background):
@@ -224,7 +200,7 @@ class VSortCameraGroup(pygame.sprite.Group):
 
     def dibujado_personalizado(self, camera):
         self.llamar_vizua.fill((0, 0, 0))
-        
+
         background_rect = self.background.get_rect(topleft=(-camera.x, -camera.y))
         self.llamar_vizua.blit(self.background, background_rect)
 
