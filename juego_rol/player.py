@@ -6,17 +6,16 @@ import sys
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, personaje):
         super().__init__(groups)
-        # Validación del diccionario personaje
         required_keys = ['nombre', 'velocidad', 'vida', 'mana', 'ataque', 'defensa']
         for key in required_keys:
             if key not in personaje:
                 raise KeyError(f"Falta la clave '{key}' en el diccionario 'personaje'")
 
         self.animations = {
-            'up': self.load_images("juego_rol/texturas/animaciones per/player_arribav2-sheet.png"),
-            'down': self.load_images("juego_rol/texturas/animaciones per/player_abajov2-sheet.png"),
-            'left': self.load_images("juego_rol/texturas/animaciones per/player_izquierdav2-sheet.png"),
-            'right': self.load_images("juego_rol/texturas/animaciones per/player_derechav2-sheet.png")
+            'up': self.load_images("juego_rol/texturas/animaciones/player-humano/player_arribav2-sheet.png"),
+            'down': self.load_images("juego_rol/texturas/animaciones/player-humano/player_abajov2-sheet.png"),
+            'left': self.load_images("juego_rol/texturas/animaciones/player-humano/player_izquierdav2-sheet.png"),
+            'right': self.load_images("juego_rol/texturas/animaciones/player-humano/player_derechav2-sheet.png")
         }
         self.image = self.animations['down'][0]
         self.rect = self.image.get_rect(topleft=pos)
@@ -32,10 +31,10 @@ class Player(pygame.sprite.Sprite):
         self.moving = False
 
         self.attack_animations = {
-            'up': self.load_attack_images("juego_rol/texturas/animaciones per/animacion attack/player_arriba-attakando-sheet.png"),
-            'down': self.load_attack_images("juego_rol/texturas/animaciones per/animacion attack/player_abajo-attakando-sheet.png"),
-            'left': self.load_attack_images("juego_rol/texturas/animaciones per/animacion attack/player_izquierda-attakando-sheet.png"),
-            'right': self.load_attack_images("juego_rol/texturas/animaciones per/animacion attack/player_derecha-attakando-sheet.png")
+            'up': self.load_attack_images("juego_rol/texturas/animaciones/player-humano/animacion-attack/player_arriba-attakando-sheet.png"),
+            'down': self.load_attack_images("juego_rol/texturas/animaciones/player-humano/animacion-attack/player_abajo-attakando-sheet.png"),
+            'left': self.load_attack_images("juego_rol/texturas/animaciones/player-humano/animacion-attack/player_izquierda-attakando-sheet.png"),
+            'right': self.load_attack_images("juego_rol/texturas/animaciones/player-humano/animacion-attack/player_derecha-attakando-sheet.png")
         }
         self.is_attacking = False
         self.attack_frame_index = 0
@@ -59,6 +58,7 @@ class Player(pygame.sprite.Sprite):
         self.defensa = personaje['defensa']
         self.items = []  # Lista para almacenar los objetos recogidos
         self.puntuacion = 0
+        self.enemies = pygame.sprite.Group()  # Inicializar el grupo de enemigos
 
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
@@ -217,9 +217,9 @@ class Player(pygame.sprite.Sprite):
                         self.hitbox.top = sprite.rect.bottom
 
     def check_collisions_with_enemies(self):
-        for sprite in self.groups()[0]:  # Asumiendo que los enemigos están en el mismo grupo que el jugador
-            if isinstance(sprite, Zombie) and self.rect.colliderect(sprite.rect):
-                sprite.attack_player(self)
+        for sprite in self.enemies:
+            if sprite.rect.colliderect(self.rect):
+                sprite.attack_player()
 
     def animar(self):
         if self.is_attacking:
@@ -288,7 +288,7 @@ class Player(pygame.sprite.Sprite):
         pantalla.fill((0, 0, 0))  # Fondo negro para el inventario
 
         y_offset = 10
-        for item in self.inventario.items:
+        for item in self.items:
             item_text = font.render(f"{item.nombre} ({item.tipo})", True, (255, 255, 255))
             pantalla.blit(item_text, (10, y_offset))
             y_offset += 40
@@ -306,18 +306,18 @@ class Player(pygame.sprite.Sprite):
 
     def equipar_objeto(self):
         item_idx = int(input("Ingresa el número del objeto que deseas equipar: ")) - 1
-        if 0 <= item_idx < len(self.inventario.items):
-            item = self.inventario.items[item_idx]
-            modificadores = self.inventario.equipar_item(item)
+        if 0 <= item_idx < len(self.items):
+            item = self.items[item_idx]
+            modificadores = item.equipar_item()
             for stat, value in modificadores.items():
                 setattr(self, stat, getattr(self, stat) + value)
             print(f"Has equipado {item.nombre}.")
 
     def usar_objeto(self):
         item_idx = int(input("Ingresa el número del objeto que deseas usar: ")) - 1
-        if 0 <= item_idx < len(self.inventario.items):
-            item = self.inventario.items[item_idx]
-            self.inventario.usar_item(item, self)
+        if 0 <= item_idx < len(self.items):
+            item = self.items[item_idx]
+            item.usar_item(self)
             print(f"Has usado {item.nombre}.")
 
 class Attack(pygame.sprite.Sprite):

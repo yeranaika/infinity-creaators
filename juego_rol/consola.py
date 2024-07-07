@@ -1,4 +1,5 @@
 import pygame
+from DataBase.database import fetch_query
 
 class Consola:
     def __init__(self):

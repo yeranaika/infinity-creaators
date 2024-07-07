@@ -1,13 +1,16 @@
+# nivel.py
 import pygame
 import sys
 from configuraciones import *
 from elementos import Piedra, Objeto
 from player import Player
-from enemigos import Zombie
-from generacion_enemigos import generar_oleada, obtener_posicion_aleatoria
+from generacion_enemigos import generar_oleada
+from menu_pausa import MenuPausa
+from consola import Consola
 
 class Nivel:
     def __init__(self, personaje, ir_a_login_callback):
+        pygame.init()
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.backgroundlevel = pygame.image.load("juego_rol/texturas/background-level/level-1/background.png").convert_alpha()
         self.llamar_vizua = pygame.display.get_surface()
@@ -18,6 +21,7 @@ class Nivel:
         self.power_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
+        self.enemy_attack_sprites = pygame.sprite.Group()  # Nuevo grupo para animaciones de ataque del zombie
 
         self.camera = pygame.math.Vector2(0, 0)
         self.personaje = personaje
@@ -25,13 +29,17 @@ class Nivel:
         self.ir_a_login_callback = ir_a_login_callback
         self.font = pygame.font.Font(None, 36)
 
-        self.tiempo_oleada = 0
-        self.intervalo_oleada = 10000
         self.numero_oleada = 0
         self.zombies_por_oleada = 5
-
+        self.tiempo_espera_oleada = 5000  # Tiempo de espera entre oleadas en milisegundos
+        self.ultima_oleada_tiempo = pygame.time.get_ticks()
         self.mostrar_nueva_oleada = False
         self.tiempo_nueva_oleada = 0
+
+        self.menu_pausa = MenuPausa()
+        self.pausado = False
+        self.mostrar_consola = False
+        self.consola = Consola()
 
         self.creacion_mapa()
 
@@ -47,11 +55,20 @@ class Nivel:
                 if columna == "p":
                     self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites, self.attack_sprites, self.power_sprites, self.item_sprites, self.personaje)
 
-                if columna == "z":
-                    Zombie((x, y), [self.visible_sprites, self.enemy_sprites], self.obstaculos_sprites, self.player, "Zombie")
-
                 if columna == "o":
                     Objeto((x, y), [self.visible_sprites, self.item_sprites])
+
+    def manejar_eventos(self, evento):
+        if evento.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if self.mostrar_consola:
+            self.consola.manejar_eventos(evento)
+        elif self.pausado:
+            if self.menu_pausa.manejar_eventos(evento):
+                self.pausado = False
+        else:
+            self.player.manejar_eventos(evento)
 
     def pantalla_muerte(self):
         font = pygame.font.Font(None, 74)
@@ -118,79 +135,104 @@ class Nivel:
             pygame.display.flip()
 
     def run(self):
-        while not self.muerto:
+        while True:
             for evento in pygame.event.get():
-                if evento.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                self.player.manejar_eventos(evento)
+                self.manejar_eventos(evento)
 
             if not self.muerto:
-                self.player.entrada()
-                self.player.actualizar()
-                self.enemy_sprites.update()
-                self.attack_sprites.update()
-                self.power_sprites.update()
-                self.item_sprites.update()
+                if not self.pausado or self.mostrar_consola:
+                    self.player.entrada()
+                    self.player.actualizar()
+                    self.enemy_sprites.update()
+                    self.attack_sprites.update()
+                    self.enemy_attack_sprites.update()  # Actualizar las animaciones de ataque de los zombies
+                    self.power_sprites.update()
+                    self.item_sprites.update()
 
-                if self.player.salud <= 0:
-                    self.muerto = True
+                    if self.player.salud <= 0:
+                        self.muerto = True
 
-                if pygame.time.get_ticks() - self.tiempo_oleada >= self.intervalo_oleada:
-                    self.tiempo_oleada, self.numero_oleada = generar_oleada(self.visible_sprites, self.enemy_sprites, self.obstaculos_sprites, self.player, self.numero_oleada, self.zombies_por_oleada, ANCHO, ALTURA)
-                    self.mostrar_nueva_oleada = True
-                    self.tiempo_nueva_oleada = pygame.time.get_ticks()
+                    if len(self.enemy_sprites) == 0:
+                        current_time = pygame.time.get_ticks()
+                        if current_time - self.ultima_oleada_tiempo >= self.tiempo_espera_oleada:
+                            self.numero_oleada += 1
+                            self.zombies_por_oleada += 2  # Incrementar la cantidad de zombies por oleada
+                            self.tiempo_oleada, self.numero_oleada = generar_oleada(
+                                self.visible_sprites, self.enemy_sprites, self.obstaculos_sprites, self.player,
+                                self.numero_oleada, self.zombies_por_oleada, ANCHO, ALTURA, self.enemy_attack_sprites
+                            )
+                            self.ultima_oleada_tiempo = current_time
+                            self.mostrar_nueva_oleada = True
+                            self.tiempo_nueva_oleada = pygame.time.get_ticks()
 
-                self.ajustar_camara()
-                self.dibujado_personalizado()
-                pygame.display.flip()
+                    if self.mostrar_nueva_oleada:
+                        self.mostrar_texto_nueva_oleada()
 
-        self.mostrar_pantalla_muerte()
+                    self.ajustar_camara()
+                    self.dibujado_personalizado()
+                else:
+                    self.menu_pausa.dibujar(self.pantalla)
+            else:
+                self.mostrar_pantalla_muerte()
+
+            if self.mostrar_consola:
+                self.consola.actualizar()
+                self.consola.dibujar(self.pantalla)
+
+            pygame.display.flip()
+            pygame.time.Clock().tick(FPS)
+
+    def mostrar_texto_nueva_oleada(self):
+        if pygame.time.get_ticks() - self.tiempo_nueva_oleada > 3000:
+            self.mostrar_nueva_oleada = False
+        else:
+            nueva_oleada_text = self.font.render("¡Nueva Oleada!", True, (255, 0, 0))
+            text_rect = nueva_oleada_text.get_rect(center=(ANCHO // 2, ALTURA // 2))
+            self.llamar_vizua.blit(nueva_oleada_text, text_rect)
 
     def ajustar_camara(self):
         self.camera.x = self.player.rect.centerx - ANCHO / 2
         self.camera.y = self.player.rect.centery - ALTURA / 2
 
     def dibujado_personalizado(self):
-        self.llamar_vizua.fill((0, 0, 0))
+            self.llamar_vizua.fill((0, 0, 0))
 
-        background_rect = self.backgroundlevel.get_rect(topleft=(-self.camera.x, -self.camera.y))
-        self.llamar_vizua.blit(self.backgroundlevel, background_rect)
+            background_rect = self.backgroundlevel.get_rect(topleft=(-self.camera.x, -self.camera.y))
+            self.llamar_vizua.blit(self.backgroundlevel, background_rect)
 
-        for sprite in sorted(self.visible_sprites, key=lambda sprite: sprite.rect.centery):
-            adjusted_rect = sprite.rect.move(-self.camera.x, -self.camera.y)
-            self.llamar_vizua.blit(sprite.image, adjusted_rect)
+            for sprite in sorted(self.visible_sprites, key=lambda sprite: sprite.rect.centery):
+                adjusted_rect = sprite.rect.move(-self.camera.x, -self.camera.y)
+                self.llamar_vizua.blit(sprite.image, adjusted_rect)
 
-        for attack in self.attack_sprites:
-            adjusted_rect = attack.rect.move(-self.camera.x, -self.camera.y)
-            self.llamar_vizua.blit(attack.image, adjusted_rect)
+            for attack in self.attack_sprites:
+                adjusted_rect = attack.rect.move(-self.camera.x, -self.camera.y)
+                self.llamar_vizua.blit(attack.image, adjusted_rect)
 
-        for power in self.power_sprites:
-            adjusted_rect = power.rect.move(-self.camera.x, -self.camera.y)
-            self.llamar_vizua.blit(power.image, adjusted_rect)
+            for power in self.power_sprites:
+                adjusted_rect = power.rect.move(-self.camera.x, -self.camera.y)
+                self.llamar_vizua.blit(power.image, adjusted_rect)
 
-        self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
-        self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)
-        self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
+            for enemy in self.enemy_sprites:
+                enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
+                adjusted_rect = enemy.rect.move(-self.camera.x, -self.camera.y)
+                self.llamar_vizua.blit(enemy.image, adjusted_rect)
 
-        for enemy in self.enemy_sprites:
-            enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
+            for enemy_attack in self.enemy_attack_sprites:
+                adjusted_rect = enemy_attack.rect.move(-self.camera.x, -self.camera.y)
+                self.llamar_vizua.blit(enemy_attack.image, adjusted_rect)
 
-        player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
-        self.llamar_vizua.blit(self.player.image, player_rect)
+            self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
+            self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)
+            self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
 
-        puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
-        self.llamar_vizua.blit(puntuacion_text, (10, 10))
+            player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(self.player.image, player_rect)
 
-        oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
-        self.llamar_vizua.blit(oleada_text, (10, 40))
+            puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
+            self.llamar_vizua.blit(puntuacion_text, (10, 10))
 
-        if self.mostrar_nueva_oleada:
-            nueva_oleada_text = self.font.render("¡Nueva Oleada!", True, (255, 0, 0))
-            text_rect = nueva_oleada_text.get_rect(center=(ANCHO // 2, ALTURA // 2))
-            self.llamar_vizua.blit(nueva_oleada_text, text_rect)
-            if pygame.time.get_ticks() - self.tiempo_nueva_oleada > 3000:
-                self.mostrar_nueva_oleada = False
+            oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
+            self.llamar_vizua.blit(oleada_text, (10, 40))
 
 class VSortCameraGroup(pygame.sprite.Group):
     def __init__(self, background):

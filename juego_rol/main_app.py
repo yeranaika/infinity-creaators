@@ -1,6 +1,8 @@
 import pygame
 import sys
+import keyboard
 from configuraciones import *
+from debug import debug
 from level import Nivel
 from mensajes_COM import MenuMensajes
 from menu_pausa import MenuPausa
@@ -18,16 +20,30 @@ class Juego:
         self.estado = 'login'
         self.personaje = None
         self.nivel = None
-        self.raza_index = -1
-        self.clase_index = -1
+        self.raza_index = -1j
         self.nombre = ''
-        self.pausado = False
+        self.pausado_por_menu = False
+        self.pausado_por_consola = False
         self.mostrar_mensajes = False
         self.menu_mensajes = MenuMensajes()
         self.menu_pausa = MenuPausa()
         self.font = pygame.font.Font(None, 36)
         self.id_cuenta = None
         self.consola = Consola()
+
+        # Configurar detección de teclas
+        keyboard.on_press_key("esc", self.toggle_pausa_por_menu)
+        keyboard.add_hotkey("ctrl+t", self.toggle_consola)
+
+    def toggle_pausa_por_menu(self, e):
+        print("ESC presionado")  # Mensaje de depuración
+        self.pausado_por_menu = not self.pausado_por_menu
+        print(f"Estado de pausa por menú: {self.pausado_por_menu}")  # Mensaje de depuración
+
+    def toggle_consola(self):
+        self.pausado_por_consola = not self.pausado_por_consola
+        self.nivel.mostrar_consola = self.pausado_por_consola
+        self.nivel.consola.activo = self.pausado_por_consola
 
     def manejar_eventos(self):
         eventos = pygame.event.get()
@@ -53,41 +69,12 @@ class Juego:
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'juego':
-                if evento.type == pygame.KEYDOWN:
-                    if evento.key == pygame.K_ESCAPE:
-                        self.pausado = not self.pausado  # Alternar estado de pausa
-                    if evento.key == pygame.K_t and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                        self.mostrar_mensajes = not self.mostrar_mensajes
-                        if self.mostrar_mensajes:
-                            self.menu_mensajes.activo = True
-                            return
-                if self.mostrar_mensajes:
-                    if not self.menu_mensajes.manejar_eventos(evento):
-                        self.mostrar_mensajes = False
-                elif not self.pausado:
-                    self.nivel.player.manejar_eventos(evento)
-
-    def mostrar_ventana_salir(self):
-        salir = False
-        while not salir:
-            for evento in pygame.event.get():
-                if evento.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if evento.type == pygame.KEYDOWN:
-                    if evento.key == pygame.K_ESCAPE:
-                        salir = True
-                    if evento.key == pygame.K_RETURN:
-                        pygame.quit()
-                        sys.exit()
-
-            self.pantalla.fill((0, 0, 0))
-            font = pygame.font.Font(None, 74)
-            texto_salir = font.render('¿Salir del juego?', True, (255, 255, 255))
-            texto_rect = texto_salir.get_rect(center=(ANCHO // 2, ALTURA // 2 - 50))
-            self.pantalla.blit(texto_salir, texto_rect)
-            pygame.display.flip()
-            self.reloj.tick(FPS)
+                if self.nivel.mostrar_consola:
+                    self.nivel.consola.manejar_eventos(evento)
+                if self.pausado_por_menu:
+                    self.nivel.menu_pausa.manejar_eventos(evento)
+                if not self.nivel.mostrar_consola and not self.pausado_por_menu:
+                    self.nivel.manejar_eventos(evento)
 
     def run(self):
         while True:
@@ -102,14 +89,17 @@ class Juego:
                         self.nivel = Nivel(self.personaje, self.ir_a_login)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
-                if self.pausado:
-                    self.menu_pausa.dibujar(self.pantalla)
+                if self.pausado_por_menu:
+                    self.nivel.menu_pausa.dibujar(self.pantalla)
+                elif self.pausado_por_consola:
+                    self.nivel.consola.actualizar()
+                    self.nivel.consola.dibujar(self.pantalla)
                 else:
-                    if self.mostrar_mensajes:
-                        self.menu_mensajes.actualizar()
-                        self.menu_mensajes.dibujar(self.pantalla)
-                    else:
-                        self.nivel.run()
+                    self.nivel.run()
+
+                # Mostrar FPS
+                fps = int(self.reloj.get_fps())
+                debug(f"FPS: {fps}", 10, 10, "white")
                 pygame.display.flip()
                 self.reloj.tick(FPS)
 
