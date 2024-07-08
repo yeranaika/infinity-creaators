@@ -2,7 +2,27 @@ import pygame
 from DataBase.database import fetch_query
 
 class Consola:
+    """
+    Clase que representa la consola del juego para entrada de comandos.
+
+    Atributos:
+        mensajes (list): Lista de mensajes de la consola.
+        font (Font): Fuente utilizada para el texto en la consola.
+        input_box (Rect): Rectángulo de la caja de entrada de texto.
+        color_inactivo (Color): Color de la caja de entrada cuando está inactiva.
+        color_activo (Color): Color de la caja de entrada cuando está activa.
+        color (Color): Color actual de la caja de entrada.
+        activo (bool): Indica si la caja de entrada está activa.
+        texto (str): Texto ingresado en la consola.
+        roles (dict): Diccionario de roles y permisos.
+        backspace_held (bool): Indica si la tecla de retroceso está presionada.
+        backspace_start_time (int): Tiempo en que se presionó la tecla de retroceso.
+        backspace_interval (int): Intervalo de tiempo para repetir la acción de retroceso.
+    """
     def __init__(self):
+        """
+        Inicializa una nueva instancia de la consola.
+        """
         self.mensajes = []
         self.font = pygame.font.Font(None, 24)
         self.input_box = pygame.Rect(10, 300, 780, 32)
@@ -17,6 +37,12 @@ class Consola:
         self.backspace_interval = 100
 
     def manejar_eventos(self, evento):
+        """
+        Maneja los eventos de Pygame, como clics y entrada de teclado.
+
+        :param evento: Evento de Pygame.
+        :return: True si la consola está activa, False en caso contrario.
+        """
         if evento.type == pygame.MOUSEBUTTONDOWN:
             if self.input_box.collidepoint(evento.pos):
                 self.activo = True
@@ -47,6 +73,9 @@ class Consola:
         return self.activo
 
     def actualizar(self):
+        """
+        Actualiza el estado de la consola, manejando la repetición de la tecla de retroceso.
+        """
         if self.backspace_held:
             current_time = pygame.time.get_ticks()
             if current_time - self.backspace_start_time >= self.backspace_interval:
@@ -63,28 +92,43 @@ class Consola:
                 if len(partes) > 1:
                     entidad = partes[1]
                     self.crear_entidad(entidad)
-            elif partes[0] == "/sql":
-                self.ejecutar_sql(partes[1:])
+            elif partes[0] == "/sql" and len(partes) > 1:
+                query = " ".join(partes[1:])
+                self.ejecutar_sql(query)
             else:
                 self.mensajes.append(('system', f"Comando no reconocido: {comando}"))
         else:
             self.mensajes.append(('system', comando))
 
+
     def mostrar_estadisticas(self):
+        """
+        Muestra las estadísticas del juego en la consola.
+        """
         self.mensajes.append(('system', "Estadísticas: [Ejemplo] HP: 100, MP: 50"))
 
     def crear_entidad(self, entidad):
+        """
+        Crea una entidad en el juego.
+
+        :param entidad: Nombre de la entidad a crear.
+        """
         self.mensajes.append(('system', f"Creando entidad: {entidad}"))
 
-    def ejecutar_sql(self, partes):
-        query = " ".join(partes)
+    def ejecutar_sql(self, query):
         result = fetch_query(query)
         if result:
-            self.mensajes.append(('system', f"Resultado: {result}"))
+            for row in result:
+                self.mensajes.append(('system', str(row)))
         else:
-            self.mensajes.append(('system', "Error ejecutando el comando SQL"))
+            self.mensajes.append(('system', "No se encontraron resultados o error en la consulta."))
 
     def dibujar(self, pantalla):
+        """
+        Dibuja la consola en la pantalla del juego.
+
+        :param pantalla: Superficie donde se dibuja la consola.
+        """
         mensajes_rect = pygame.Rect(10, 10, 780, 280)
         pygame.draw.rect(pantalla, pygame.Color('black'), mensajes_rect, 0)
         pygame.draw.rect(pantalla, pygame.Color('white'), mensajes_rect, 2)

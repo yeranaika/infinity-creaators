@@ -7,6 +7,13 @@ from DataBase.database import execute_query, fetch_query
 imagen_fondo = pygame.image.load('juego_rol/texturas/background-level/level-1/background.png')
 
 def crear_personaje(pantalla, juego):
+    """
+    Función para crear un nuevo personaje en el juego.
+
+    :param pantalla: Superficie donde se dibuja la interfaz.
+    :param juego: Instancia del juego.
+    :return: Diccionario con los detalles del personaje creado y otros parámetros.
+    """
     reloj = pygame.time.Clock()
     font = pygame.font.Font(None, 36)
     razas = ['Humano', 'Elfo', 'Enano']
@@ -42,44 +49,33 @@ def crear_personaje(pantalla, juego):
                 color_nombre = color_activo if activo_nombre else color_inactivo
 
                 if boton_confirmar.collidepoint(evento.pos):
+                    print("Botón Confirmar clickeado")
                     if raza_index != -1 and clase_index != -1 and nombre:
+                        print("Personaje creado, cambiando a estado 'juego'")
+                        # Obtener id_clase desde la base de datos
                         query_clase = "SELECT id_clase FROM Clase WHERE nombre_clase = %s"
                         clase_result = fetch_query(query_clase, (clases[clase_index],))
                         id_clase = clase_result[0][0] if clase_result else None
 
+                        # Guardar el personaje en la base de datos
                         query = """
                         INSERT INTO Personaje (id_cuenta, nombre_personaje, id_raza, id_clase, nivel, estado, vida, mana, ataque, defensa, velocidad)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """
                         params = (juego.id_cuenta, nombre, raza_index + 1, id_clase, 1, 'Vivo', 100, 50, 10, 5, 5)
                         execute_query(query, params)
-
-                        # Crear el diccionario del personaje
-                        personaje = {
-                            'id': None,  # Puede ser necesario obtener el ID generado para el personaje
-                            'nombre': nombre,
-                            'raza': razas[raza_index],
-                            'clase': clases[clase_index],
-                            'nivel': 1,
-                            'estado': 'Vivo',
-                            'vida': 100,
-                            'max_vida': 100,
-                            'mana': 50,
-                            'max_mana': 50,
-                            'ataque': 10,
-                            'defensa': 5,
-                            'velocidad': 5  # Asegúrate de incluir la clave 'velocidad'
-                        }
-
+                        
                         listo = True
                         juego.estado = 'seleccionar_personaje'
-                        juego.nivel = Nivel(personaje, juego.ir_a_login)
+                        print("juego iniciado")
+                        juego.nivel = Nivel({'raza': razas[raza_index], 'clase': clases[clase_index], 'nombre': nombre}, juego.ir_a_login)
                         juego.raza_index = raza_index
                         juego.clase_index = clase_index
                         juego.nombre = nombre
-                        return personaje, True, raza_index, clase_index, nombre
+                        return {'raza': razas[raza_index], 'clase': clases[clase_index], 'nombre': nombre}, True, raza_index, clase_index, nombre
 
                 if boton_cancelar.collidepoint(evento.pos):
+                    print("Botón Cancelar clickeado")
                     return None, False, raza_index, clase_index, nombre
 
                 for i in range(len(razas)):

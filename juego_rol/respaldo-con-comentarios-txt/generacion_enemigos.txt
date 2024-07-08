@@ -18,7 +18,7 @@ def generar_oleada(visible_sprites, enemy_sprites, obstaculos_sprites, player, n
     :return: Tiempo de inicio de la oleada y el número de la oleada actualizada.
     """
     numero_oleada += 1
-    cantidad_zombies = zombies_por_oleada + (2 * (numero_oleada - 1))
+    cantidad_zombies = zombies_por_oleada + (5 * (numero_oleada - 1))
     for _ in range(cantidad_zombies):
         x, y = obtener_posicion_aleatoria(obstaculos_sprites, ANCHO, ALTURA)
         Zombie((x, y), [visible_sprites, enemy_sprites], obstaculos_sprites, player, "Zombie", enemy_attack_sprites)

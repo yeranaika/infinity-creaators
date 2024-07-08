@@ -14,16 +14,37 @@ fuente = pygame.font.Font(None, 36)
 fuente_pequena = pygame.font.Font(None, 24)
 
 def agregar_usuario(usuario, contrasena):
+    """
+    Agrega un nuevo usuario a la base de datos.
+
+    :param usuario: Nombre de usuario.
+    :param contrasena: Contraseña del usuario.
+    """
     query = "INSERT INTO Cuenta (usuario, fecha_creacion, rol, contraseña) VALUES (%s, NOW(), 'Jugador', %s)"
     execute_query(query, (usuario, contrasena))
 
 def dibujar_texto(texto, fuente, color, superficie, x, y):
+    """
+    Dibuja texto en la superficie proporcionada.
+
+    :param texto: Texto a dibujar.
+    :param fuente: Fuente del texto.
+    :param color: Color del texto.
+    :param superficie: Superficie donde se dibujará el texto.
+    :param x: Coordenada x para dibujar el texto.
+    :param y: Coordenada y para dibujar el texto.
+    """
     texto_obj = fuente.render(texto, True, color)
     rect_texto = texto_obj.get_rect()
     rect_texto.topleft = (x, y)
     superficie.blit(texto_obj, rect_texto)
 
 def registro(juego):
+    """
+    Muestra la pantalla de registro de usuario.
+
+    :param juego: Instancia del juego.
+    """
     reloj = pygame.time.Clock()
     offset_x = -10
     input_box1 = pygame.Rect(ANCHO // 2 - 5 + offset_x, 200, 300, 40)

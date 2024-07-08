@@ -33,6 +33,10 @@ class Juego:
         consola (Consola): Instancia de la consola del juego.
     """
     def __init__(self):
+        """
+        Inicializa una nueva instancia del juego, configurando la pantalla,
+        el reloj y otros parámetros iniciales.
+        """
         pygame.init()
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.reloj = pygame.time.Clock()
@@ -40,9 +44,8 @@ class Juego:
         self.estado = 'login'
         self.personaje = None
         self.nivel = None
-        self.raza_index = -1  # Inicializar raza_index
-        self.clase_index = -1  # Inicializar clase_index
-        self.nombre = ''       # Inicializar nombre
+        self.raza_index = -1
+        self.nombre = ''
         self.pausado_por_menu = False
         self.pausado_por_consola = False
         self.mostrar_mensajes = False
@@ -67,17 +70,12 @@ class Juego:
         print(f"Estado de pausa por menú: {self.pausado_por_menu}")  # Mensaje de depuración
 
     def toggle_consola(self):
+        """
+        Alterna el estado de la consola cuando se presiona la combinación de teclas Ctrl+T.
+        """
         self.pausado_por_consola = not self.pausado_por_consola
         self.nivel.mostrar_consola = self.pausado_por_consola
         self.nivel.consola.activo = self.pausado_por_consola
-
-        if self.pausado_por_consola:
-            # Evitar que se ingresen caracteres
-            pygame.key.set_repeat(0)
-        else:
-            # Restaurar la capacidad de ingresar caracteres
-            pygame.key.set_repeat(1, 100)
-
 
     def manejar_eventos(self):
         """

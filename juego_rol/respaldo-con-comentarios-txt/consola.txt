@@ -1,48 +1,47 @@
 import pygame
+from DataBase.database import fetch_query
 
-class MenuMensajes:
+class Consola:
     """
-    Clase que representa el menú de mensajes en el juego.
+    Clase que representa la consola del juego para entrada de comandos.
 
     Atributos:
-        mensajes (list): Lista de mensajes.
-        font (Font): Fuente utilizada para mostrar los mensajes.
-        input_box (Rect): Caja de entrada para los mensajes.
+        mensajes (list): Lista de mensajes de la consola.
+        font (Font): Fuente utilizada para el texto en la consola.
+        input_box (Rect): Rectángulo de la caja de entrada de texto.
         color_inactivo (Color): Color de la caja de entrada cuando está inactiva.
         color_activo (Color): Color de la caja de entrada cuando está activa.
         color (Color): Color actual de la caja de entrada.
         activo (bool): Indica si la caja de entrada está activa.
-        texto (str): Texto ingresado en la caja de entrada.
+        texto (str): Texto ingresado en la consola.
         roles (dict): Diccionario de roles y permisos.
-        backspace_held (bool): Indica si la tecla de retroceso está siendo mantenida.
-        backspace_start_time (int): Tiempo de inicio de la tecla de retroceso.
-        backspace_interval (int): Intervalo de tiempo para borrar rápidamente.
+        backspace_held (bool): Indica si la tecla de retroceso está presionada.
+        backspace_start_time (int): Tiempo en que se presionó la tecla de retroceso.
+        backspace_interval (int): Intervalo de tiempo para repetir la acción de retroceso.
     """
     def __init__(self):
         """
-        Inicializa una nueva instancia de la clase MenuMensajes.
+        Inicializa una nueva instancia de la consola.
         """
         self.mensajes = []
         self.font = pygame.font.Font(None, 24)
-        self.input_box = pygame.Rect(10, 300, 780, 32)  # Ajustar posición de la caja de entrada
+        self.input_box = pygame.Rect(10, 300, 780, 32)
         self.color_inactivo = pygame.Color('lightskyblue3')
         self.color_activo = pygame.Color('dodgerblue2')
         self.color = self.color_activo
         self.activo = False
         self.texto = ''
-        self.roles = {"game_master": True}  # Puedes expandir esto con más roles y permisos
-
-        # Variables para control de backspace
+        self.roles = {"game_master": True}
         self.backspace_held = False
         self.backspace_start_time = 0
-        self.backspace_interval = 100  # Intervalo en milisegundos para borrar rápidamente
+        self.backspace_interval = 100
 
     def manejar_eventos(self, evento):
         """
-        Maneja los eventos de Pygame para la caja de entrada de mensajes.
+        Maneja los eventos de Pygame, como clics y entrada de teclado.
 
         :param evento: Evento de Pygame.
-        :return: Estado de la caja de entrada (activa o no).
+        :return: True si la consola está activa, False en caso contrario.
         """
         if evento.type == pygame.MOUSEBUTTONDOWN:
             if self.input_box.collidepoint(evento.pos):
@@ -54,19 +53,16 @@ class MenuMensajes:
         if evento.type == pygame.KEYDOWN:
             if self.activo:
                 if evento.key == pygame.K_RETURN:
-                    print("Enter in message box")  # Log para verificar la presión de Enter en la caja de mensajes
                     if self.texto:
                         self.ejecutar_comando(self.texto)
                         self.texto = ''
                     else:
-                        self.activo = False  # Salir del modo de mensajes solo si no hay texto
+                        self.activo = False
                         return False
                 elif evento.key == pygame.K_BACKSPACE:
                     self.backspace_held = True
                     self.backspace_start_time = pygame.time.get_ticks()
                     self.texto = self.texto[:-1]
-                elif evento.key == pygame.KMOD_CTRL and evento.key == pygame.K_t:
-                    pass  # Evitar que Ctrl + T se escriba en la caja de entrada
                 else:
                     self.texto += evento.unicode
 
@@ -74,11 +70,11 @@ class MenuMensajes:
             if evento.key == pygame.K_BACKSPACE:
                 self.backspace_held = False
 
-        return self.activo  # Permanecer en el modo de mensajes si está activo
+        return self.activo
 
     def actualizar(self):
         """
-        Actualiza el estado de la caja de entrada de mensajes.
+        Actualiza el estado de la consola, manejando la repetición de la tecla de retroceso.
         """
         if self.backspace_held:
             current_time = pygame.time.get_ticks()
@@ -88,7 +84,7 @@ class MenuMensajes:
 
     def ejecutar_comando(self, comando):
         """
-        Ejecuta un comando ingresado en la caja de entrada de mensajes.
+        Ejecuta un comando ingresado en la consola.
 
         :param comando: Comando ingresado.
         """
@@ -101,33 +97,46 @@ class MenuMensajes:
                 if len(partes) > 1:
                     entidad = partes[1]
                     self.crear_entidad(entidad)
-            # Agrega más comandos aquí según sea necesario
+            elif partes[0] == "/sql":
+                self.ejecutar_sql(partes[1:])
+            else:
+                self.mensajes.append(('system', f"Comando no reconocido: {comando}"))
         else:
             self.mensajes.append(('system', comando))
 
     def mostrar_estadisticas(self):
         """
-        Muestra las estadísticas del juego.
+        Muestra las estadísticas del juego en la consola.
         """
-        # Lógica para mostrar estadísticas de personajes o enemigos
         self.mensajes.append(('system', "Estadísticas: [Ejemplo] HP: 100, MP: 50"))
 
     def crear_entidad(self, entidad):
         """
-        Crea una nueva entidad en el juego.
+        Crea una entidad en el juego.
 
-        :param entidad: Tipo de entidad a crear.
+        :param entidad: Nombre de la entidad a crear.
         """
-        # Lógica para crear personajes, equipo, enemigos, etc.
         self.mensajes.append(('system', f"Creando entidad: {entidad}"))
+
+    def ejecutar_sql(self, partes):
+        """
+        Ejecuta una consulta SQL ingresada en la consola.
+
+        :param partes: Lista de partes del comando SQL.
+        """
+        query = " ".join(partes)
+        result = fetch_query(query)
+        if result:
+            self.mensajes.append(('system', f"Resultado: {result}"))
+        else:
+            self.mensajes.append(('system', "Error ejecutando el comando SQL"))
 
     def dibujar(self, pantalla):
         """
-        Dibuja los mensajes y la caja de entrada en la pantalla.
+        Dibuja la consola en la pantalla del juego.
 
-        :param pantalla: Superficie donde se dibujan los mensajes y la caja de entrada.
+        :param pantalla: Superficie donde se dibuja la consola.
         """
-        # Mostrar mensajes anteriores en una caja de texto
         mensajes_rect = pygame.Rect(10, 10, 780, 280)
         pygame.draw.rect(pantalla, pygame.Color('black'), mensajes_rect, 0)
         pygame.draw.rect(pantalla, pygame.Color('white'), mensajes_rect, 2)
@@ -139,10 +148,9 @@ class MenuMensajes:
             pantalla.blit(mensaje_surface, (15, y))
             y += 20
             if y > mensajes_rect.height - 20:
-                break  # No mostrar más mensajes si se excede el área de mensajes
+                break
 
-        # Mostrar la entrada del usuario en una caja de texto con fondo negro
-        pygame.draw.rect(pantalla, pygame.Color('black'), self.input_box)  # Fondo negro para la caja de entrada
-        txt_surface = self.font.render(self.texto, True, pygame.Color('white'))  # Texto en blanco
+        pygame.draw.rect(pantalla, pygame.Color('black'), self.input_box)
+        txt_surface = self.font.render(self.texto, True, pygame.Color('white'))
         pantalla.blit(txt_surface, (self.input_box.x + 5, self.input_box.y + 5))
         pygame.draw.rect(pantalla, self.color, self.input_box, 2)

@@ -10,11 +10,22 @@ imagen_fondo = pygame.image.load('juego_rol/texturas/background-level/level-1/ba
 fuente = pygame.font.Font(None, 36)
 
 def obtener_personajes(id_cuenta):
+    """
+    Obtiene los personajes asociados a una cuenta desde la base de datos.
+
+    :param id_cuenta: ID de la cuenta.
+    :return: Resultado de la consulta con los personajes asociados a la cuenta.
+    """
     query = "SELECT id_personaje, nombre_personaje FROM Personaje WHERE id_cuenta = %s"
     result = fetch_query(query, (id_cuenta,))
     return result
 
 def seleccionar_personaje(juego):
+    """
+    Muestra la pantalla de selección de personaje y maneja la lógica de selección.
+
+    :param juego: Instancia del juego.
+    """
     personajes = obtener_personajes(juego.id_cuenta)
     reloj = pygame.time.Clock()
     seleccion_personaje = 0

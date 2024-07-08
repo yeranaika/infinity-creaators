@@ -7,6 +7,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, personaje):
         super().__init__(groups)
         required_keys = ['nombre', 'velocidad', 'vida', 'mana', 'ataque', 'defensa']
+        self.visible_sprites = groups[0]  # Asignar el grupo de sprites visibles
         for key in required_keys:
             if key not in personaje:
                 raise KeyError(f"Falta la clave '{key}' en el diccionario 'personaje'")
@@ -43,6 +44,9 @@ class Player(pygame.sprite.Sprite):
         self.attack_delay = 180  # Duración del ataque en milisegundos
         self.last_attack_time = 0  # Momento del último ataque
 
+        #incrementos
+        self.attack_increment = 0.05  # Incremento de ataque del 5%
+
         self.power_sprites = power_sprites
         self.item_sprites = item_sprites
         self.power_cooldown = 500  # Cooldown del poder en milisegundos
@@ -59,6 +63,9 @@ class Player(pygame.sprite.Sprite):
         self.items = []  # Lista para almacenar los objetos recogidos
         self.puntuacion = 0
         self.enemies = pygame.sprite.Group()  # Inicializar el grupo de enemigos
+
+    #consol estado
+        self.consola_activa = False  # Nuevo atributo para rastrear si la consola está activa
 
     def load_images(self, filepath):
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
@@ -77,6 +84,9 @@ class Player(pygame.sprite.Sprite):
         return frames
 
     def manejar_eventos(self, evento):
+        if self.consola_activa:
+            return  # No hacer nada si la consola está activa
+
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_i:
                 self.mostrar_inventario()
@@ -102,12 +112,21 @@ class Player(pygame.sprite.Sprite):
             elif evento.key == pygame.K_q and not (pygame.key.get_mods() & pygame.KMOD_SHIFT):
                 self.recoger_objeto()
             elif evento.key == pygame.K_q and (pygame.key.get_mods() & pygame.KMOD_SHIFT):
-                self.soltar_objeto()
+                self.soltar_objeto()  # Asegúrate de que llama a `soltar_objeto`
         elif evento.type == pygame.KEYUP:
             if evento.key == pygame.K_LSHIFT:
                 self.current_speed = self.speed
 
+
+    def dibujar_estadisticas(self, pantalla, x, y):
+        font = pygame.font.Font(None, 36)
+        ataque_text = font.render(f"Ataque: {self.ataque:.2f}", True, (255, 0, 0))  # Texto en rojo
+        pantalla.blit(ataque_text, (x, y))
+
     def entrada(self):
+        if self.consola_activa:
+            return  # No hacer nada si la consola está activa
+
         teclas = pygame.key.get_pressed()
         self.moving = False
 
@@ -134,7 +153,30 @@ class Player(pygame.sprite.Sprite):
             else:
                 self.direction.x = 0
 
+    def recoger_objeto(self):
+        for item in self.item_sprites:
+            if self.rect.colliderect(item.rect):
+                item.kill()
+                item.aplicar_efecto(self)
+                print(f"Has recogido un {item.tipo}.")
+                return
+            
+
+    def dibujar_cooldown_atk(self, pantalla, x, y):
+        current_time = pygame.time.get_ticks()
+        time_left = max(0, (self.attack_delay - (current_time - self.last_attack_time)) / 1000)
+        cooldown_text = f"{time_left:.1f}"
+        font = pygame.font.Font(None, 36)
+        text_surface = font.render(cooldown_text, True, (255, 255, 255))
+        pantalla.blit(text_surface, (x + 30, y + 0))
+
+        attack_rect = pygame.Rect(x, y, 20, 20)
+        pygame.draw.rect(pantalla, (255, 255, 255), attack_rect)
+
     def crear_ataque(self):
+        if not self.groups():
+            return  # Si no hay grupos, no se puede crear el ataque
+
         offset = pygame.math.Vector2(0, 0)
         if self.current_animation == 'up':
             offset = pygame.math.Vector2(0, -32)
@@ -148,16 +190,6 @@ class Player(pygame.sprite.Sprite):
         attack_position = self.rect.center + offset
         Attack(attack_position, self.direction, [self.attack_sprites, self.groups()[0]], self.attack_animations[self.current_animation], self.attack_animation_speed, self.ataque)
 
-    def dibujar_cooldown_atk(self, pantalla, x, y):
-        current_time = pygame.time.get_ticks()
-        time_left = max(0, (self.attack_delay - (current_time - self.last_attack_time)) / 1000)
-        cooldown_text = f"{time_left:.1f}"
-        font = pygame.font.Font(None, 36)
-        text_surface = font.render(cooldown_text, True, (255, 255, 255))
-        pantalla.blit(text_surface, (x + 30, y + 0))
-
-        attack_rect = pygame.Rect(x, y, 20, 20)
-        pygame.draw.rect(pantalla, (255, 255, 255), attack_rect)
 
     def crear_poder(self):
         offset = pygame.math.Vector2(0, 0)
@@ -277,10 +309,12 @@ class Player(pygame.sprite.Sprite):
     def soltar_objeto(self):
         if self.items:
             item = self.items.pop()
-            item.rect.topleft = self.rect.topleft
+            item.rect.topleft = self.rect.topleft  # Colocar el objeto en la posición del jugador
             self.item_sprites.add(item)
             item.add(self.groups()[0])
+            item.add(self.visible_sprites)  # Asegurarse de que se dibuje
             print("Has soltado un objeto.")
+
 
     def mostrar_inventario(self):
         pantalla = pygame.display.get_surface()
@@ -331,7 +365,7 @@ class Attack(pygame.sprite.Sprite):
         self.direction = direction
         self.ataque = ataque  # Daño del ataque basado en la estadística de ataque del personaje
         self.lifetime = len(self.frames) * 1  # Duración en frames de la animación
-        self.hitbox = self.rect.inflate(-35, -35)
+        self.hitbox = self.rect.inflate(-45, -45)
 
     def update(self):
         self.frame_index += self.animation_speed

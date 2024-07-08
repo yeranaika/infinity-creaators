@@ -1,4 +1,3 @@
-# nivel.py
 import pygame
 import sys
 from configuraciones import *
@@ -7,6 +6,7 @@ from player import Player
 from generacion_enemigos import generar_oleada
 from menu_pausa import MenuPausa
 from consola import Consola
+from DataBase.database import *
 
 class Nivel:
     def __init__(self, personaje, ir_a_login_callback):
@@ -30,7 +30,7 @@ class Nivel:
         self.font = pygame.font.Font(None, 36)
 
         self.numero_oleada = 0
-        self.zombies_por_oleada = 5
+        self.zombies_por_oleada = 2
         self.tiempo_espera_oleada = 5000  # Tiempo de espera entre oleadas en milisegundos
         self.ultima_oleada_tiempo = pygame.time.get_ticks()
         self.mostrar_nueva_oleada = False
@@ -56,7 +56,7 @@ class Nivel:
                     self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites, self.attack_sprites, self.power_sprites, self.item_sprites, self.personaje)
 
                 if columna == "o":
-                    Objeto((x, y), [self.visible_sprites, self.item_sprites])
+                    Objeto((x, y), [self.visible_sprites, self.item_sprites], 'espada', 0.05)
 
     def manejar_eventos(self, evento):
         if evento.type == pygame.QUIT:
@@ -64,11 +64,13 @@ class Nivel:
             sys.exit()
         if self.mostrar_consola:
             self.consola.manejar_eventos(evento)
+            return  # No procesar más eventos si la consola está activa
         elif self.pausado:
             if self.menu_pausa.manejar_eventos(evento):
                 self.pausado = False
         else:
             self.player.manejar_eventos(evento)
+
 
     def pantalla_muerte(self):
         font = pygame.font.Font(None, 74)
@@ -195,44 +197,47 @@ class Nivel:
         self.camera.y = self.player.rect.centery - ALTURA / 2
 
     def dibujado_personalizado(self):
-            self.llamar_vizua.fill((0, 0, 0))
+        self.llamar_vizua.fill((0, 0, 0))
 
-            background_rect = self.backgroundlevel.get_rect(topleft=(-self.camera.x, -self.camera.y))
-            self.llamar_vizua.blit(self.backgroundlevel, background_rect)
+        background_rect = self.backgroundlevel.get_rect(topleft=(-self.camera.x, -self.camera.y))
+        self.llamar_vizua.blit(self.backgroundlevel, background_rect)
 
-            for sprite in sorted(self.visible_sprites, key=lambda sprite: sprite.rect.centery):
-                adjusted_rect = sprite.rect.move(-self.camera.x, -self.camera.y)
-                self.llamar_vizua.blit(sprite.image, adjusted_rect)
+        for sprite in sorted(self.visible_sprites, key=lambda sprite: sprite.rect.centery):
+            adjusted_rect = sprite.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(sprite.image, adjusted_rect)
 
-            for attack in self.attack_sprites:
-                adjusted_rect = attack.rect.move(-self.camera.x, -self.camera.y)
-                self.llamar_vizua.blit(attack.image, adjusted_rect)
+        for attack in self.attack_sprites:
+            adjusted_rect = attack.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(attack.image, adjusted_rect)
 
-            for power in self.power_sprites:
-                adjusted_rect = power.rect.move(-self.camera.x, -self.camera.y)
-                self.llamar_vizua.blit(power.image, adjusted_rect)
+        for power in self.power_sprites:
+            adjusted_rect = power.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(power.image, adjusted_rect)
 
-            for enemy in self.enemy_sprites:
-                enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
-                adjusted_rect = enemy.rect.move(-self.camera.x, -self.camera.y)
-                self.llamar_vizua.blit(enemy.image, adjusted_rect)
+        for enemy in self.enemy_sprites:
+            enemy.dibujar_barra_vida(self.llamar_vizua, self.camera)
+            adjusted_rect = enemy.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(enemy.image, adjusted_rect)
 
-            for enemy_attack in self.enemy_attack_sprites:
-                adjusted_rect = enemy_attack.rect.move(-self.camera.x, -self.camera.y)
-                self.llamar_vizua.blit(enemy_attack.image, adjusted_rect)
+        for enemy_attack in self.enemy_attack_sprites:
+            adjusted_rect = enemy_attack.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(enemy_attack.image, adjusted_rect)
 
-            self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
-            self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)
-            self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
+        player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
+        self.llamar_vizua.blit(self.player.image, player_rect)
 
-            player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
-            self.llamar_vizua.blit(self.player.image, player_rect)
+        self.player.dibujar_barra_vida(self.llamar_vizua, self.camera)
+        self.player.dibujar_cooldown_atk(self.llamar_vizua, 20, 20)
+        self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
 
-            puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
-            self.llamar_vizua.blit(puntuacion_text, (10, 10))
+        puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
+        self.llamar_vizua.blit(puntuacion_text, (10, 10))
 
-            oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
-            self.llamar_vizua.blit(oleada_text, (10, 40))
+        oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
+        self.llamar_vizua.blit(oleada_text, (10, 40))
+
+        # Dibujar las estadísticas del jugador en la esquina superior derecha
+        self.player.dibujar_estadisticas(self.llamar_vizua, ANCHO - 150, 10)
 
 class VSortCameraGroup(pygame.sprite.Group):
     def __init__(self, background):

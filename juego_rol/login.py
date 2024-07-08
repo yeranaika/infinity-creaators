@@ -14,22 +14,51 @@ fuente = pygame.font.Font(None, 36)
 fuente_pequena = pygame.font.Font(None, 24)
 
 def verificar_usuario(usuario, contrasena):
+    """
+    Verifica las credenciales del usuario en la base de datos.
+
+    :param usuario: Nombre de usuario.
+    :param contrasena: Contraseña del usuario.
+    :return: Resultado de la consulta si el usuario existe, de lo contrario None.
+    """
     query = "SELECT * FROM Cuenta WHERE usuario = %s AND contraseña = %s"
     result = fetch_query(query, (usuario, contrasena))
     return result
 
 def verificar_personajes(id_cuenta):
+    """
+    Verifica los personajes asociados a una cuenta en la base de datos.
+
+    :param id_cuenta: ID de la cuenta.
+    :return: Resultado de la consulta con los personajes asociados a la cuenta.
+    """
     query = "SELECT * FROM Personaje WHERE id_cuenta = %s"
     result = fetch_query(query, (id_cuenta,))
     return result
 
 def dibujar_texto(texto, fuente, color, superficie, x, y):
+    """
+    Dibuja texto en la superficie proporcionada.
+
+    :param texto: Texto a dibujar.
+    :param fuente: Fuente del texto.
+    :param color: Color del texto.
+    :param superficie: Superficie donde se dibujará el texto.
+    :param x: Coordenada x para dibujar el texto.
+    :param y: Coordenada y para dibujar el texto.
+    """
     texto_obj = fuente.render(texto, True, color)
     rect_texto = texto_obj.get_rect()
     rect_texto.topleft = (x, y)
     superficie.blit(texto_obj, rect_texto)
 
 def login(juego, evento):
+    """
+    Maneja la lógica de inicio de sesión en el juego.
+
+    :param juego: Instancia del juego.
+    :param evento: Evento de Pygame.
+    """
     from main_app import Juego  # Importar aquí para evitar importaciones circulares
 
     reloj = pygame.time.Clock()
