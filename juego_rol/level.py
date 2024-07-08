@@ -9,7 +9,7 @@ from consola import Consola
 from DataBase.database import *
 
 class Nivel:
-    def __init__(self, personaje, ir_a_login_callback):
+    def __init__(self, personaje, ir_a_login_callback, juego):
         pygame.init()
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.backgroundlevel = pygame.image.load("juego_rol/texturas/background-level/level-1/background.png").convert_alpha()
@@ -27,11 +27,12 @@ class Nivel:
         self.personaje = personaje
         self.muerto = False
         self.ir_a_login_callback = ir_a_login_callback
-        self.font = pygame.font.Font(None, 36)
+        self.font = pygame.font.Font(None, 34)
+        self.juego = juego  # Inicializa el atributo juego
 
         self.numero_oleada = 0
         self.zombies_por_oleada = 2
-        self.tiempo_espera_oleada = 5000  # Tiempo de espera entre oleadas en milisegundos
+        self.tiempo_espera_oleada = 3000  # Tiempo de espera entre oleadas en milisegundos
         self.ultima_oleada_tiempo = pygame.time.get_ticks()
         self.mostrar_nueva_oleada = False
         self.tiempo_nueva_oleada = 0
@@ -62,6 +63,11 @@ class Nivel:
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        # En el método manejar_eventos
+        if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_q and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                self.player.soltar_objeto()
+
         if self.mostrar_consola:
             self.consola.manejar_eventos(evento)
             return  # No procesar más eventos si la consola está activa
@@ -70,6 +76,11 @@ class Nivel:
                 self.pausado = False
         else:
             self.player.manejar_eventos(evento)
+
+    def toggle_pausa(self):
+        self.pausado = not self.pausado
+
+
 
 
     def pantalla_muerte(self):
@@ -104,7 +115,7 @@ class Nivel:
                 sys.exit()
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 if boton_reaparecer.collidepoint(evento.pos):
-                    self.__init__(self.personaje, self.ir_a_login_callback)
+                    self.__init__(self.personaje, self.ir_a_login_callback, self.juego)
                     return True
                 if boton_menu.collidepoint(evento.pos):
                     self.ir_a_login_callback()
@@ -142,23 +153,25 @@ class Nivel:
                 self.manejar_eventos(evento)
 
             if not self.muerto:
-                if not self.pausado or self.mostrar_consola:
+                if not self.juego.pausado_por_menu and not self.mostrar_consola:
                     self.player.entrada()
                     self.player.actualizar()
                     self.enemy_sprites.update()
                     self.attack_sprites.update()
-                    self.enemy_attack_sprites.update()  # Actualizar las animaciones de ataque de los zombies
+                    self.enemy_attack_sprites.update()
                     self.power_sprites.update()
                     self.item_sprites.update()
 
                     if self.player.salud <= 0:
                         self.muerto = True
 
+
+                #llamda a la oledada ( a generar )
                     if len(self.enemy_sprites) == 0:
                         current_time = pygame.time.get_ticks()
                         if current_time - self.ultima_oleada_tiempo >= self.tiempo_espera_oleada:
                             self.numero_oleada += 1
-                            self.zombies_por_oleada += 2  # Incrementar la cantidad de zombies por oleada
+                            self.zombies_por_oleada += 2
                             self.tiempo_oleada, self.numero_oleada = generar_oleada(
                                 self.visible_sprites, self.enemy_sprites, self.obstaculos_sprites, self.player,
                                 self.numero_oleada, self.zombies_por_oleada, ANCHO, ALTURA, self.enemy_attack_sprites
@@ -167,13 +180,8 @@ class Nivel:
                             self.mostrar_nueva_oleada = True
                             self.tiempo_nueva_oleada = pygame.time.get_ticks()
 
-                    if self.mostrar_nueva_oleada:
-                        self.mostrar_texto_nueva_oleada()
-
-                    self.ajustar_camara()
-                    self.dibujado_personalizado()
-                else:
-                    self.menu_pausa.dibujar(self.pantalla)
+                self.ajustar_camara()
+                self.dibujado_personalizado()
             else:
                 self.mostrar_pantalla_muerte()
 
@@ -181,20 +189,25 @@ class Nivel:
                 self.consola.actualizar()
                 self.consola.dibujar(self.pantalla)
 
+            self.mostrar_texto_nueva_oleada()
+
             pygame.display.flip()
             pygame.time.Clock().tick(FPS)
 
     def mostrar_texto_nueva_oleada(self):
-        if pygame.time.get_ticks() - self.tiempo_nueva_oleada > 3000:
-            self.mostrar_nueva_oleada = False
-        else:
-            nueva_oleada_text = self.font.render("¡Nueva Oleada!", True, (255, 0, 0))
-            text_rect = nueva_oleada_text.get_rect(center=(ANCHO // 2, ALTURA // 2))
-            self.llamar_vizua.blit(nueva_oleada_text, text_rect)
+        if self.mostrar_nueva_oleada:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.tiempo_nueva_oleada < 5000:  # Mostrar mensaje durante 5 segundos
+                oleada_text = self.font.render(f"¡Nueva oleada {self.numero_oleada}!", True, (255, 0, 0))
+                oleada_rect = oleada_text.get_rect(center=(self.pantalla.get_width() // 2, self.pantalla.get_height() // 2))
+                self.pantalla.blit(oleada_text, oleada_rect)
+            else:
+                self.mostrar_nueva_oleada = False
 
     def ajustar_camara(self):
         self.camera.x = self.player.rect.centerx - ANCHO / 2
         self.camera.y = self.player.rect.centery - ALTURA / 2
+
 
     def dibujado_personalizado(self):
         self.llamar_vizua.fill((0, 0, 0))
@@ -223,6 +236,10 @@ class Nivel:
             adjusted_rect = enemy_attack.rect.move(-self.camera.x, -self.camera.y)
             self.llamar_vizua.blit(enemy_attack.image, adjusted_rect)
 
+        for item in self.item_sprites:  # Asegúrate de dibujar los items
+            adjusted_rect = item.rect.move(-self.camera.x, -self.camera.y)
+            self.llamar_vizua.blit(item.image, adjusted_rect)
+
         player_rect = self.player.rect.move(-self.camera.x, -self.camera.y)
         self.llamar_vizua.blit(self.player.image, player_rect)
 
@@ -231,13 +248,14 @@ class Nivel:
         self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
 
         puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
-        self.llamar_vizua.blit(puntuacion_text, (10, 10))
+        self.llamar_vizua.blit(puntuacion_text, (10, 80))
 
         oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
-        self.llamar_vizua.blit(oleada_text, (10, 40))
+        self.llamar_vizua.blit(oleada_text, (10, 10))
 
         # Dibujar las estadísticas del jugador en la esquina superior derecha
         self.player.dibujar_estadisticas(self.llamar_vizua, ANCHO - 150, 10)
+
 
 class VSortCameraGroup(pygame.sprite.Group):
     def __init__(self, background):

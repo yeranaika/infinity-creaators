@@ -1,28 +1,29 @@
 import random
 import pygame
 from enemigos import Zombie
+from DataBase.database import DBmodificacionEnemigos
 
-def generar_oleada(visible_sprites, enemy_sprites, obstaculos_sprites, player, numero_oleada, zombies_por_oleada, ANCHO, ALTURA, enemy_attack_sprites):
-    """
-    Genera una oleada de zombies en el juego.
+def generar_oleada(visible_sprites, enemy_sprites, obstaculos_sprites, player, num_oleada, num_zombies, ancho, alto, enemy_attack_sprites):
+    for _ in range(num_zombies):
+        x = random.randint(0, ancho)
+        y = random.randint(0, alto)
+        
+        # Aquí obtenemos un id de un zombie insertado
+        # Puedes ajustar la lógica para obtener diferentes zombies según la oleada
+        enemigo = DBmodificacionEnemigos.obtener_enemigo(1)  # Usamos el id 1 como ejemplo
+        if enemigo:
+            enemy_id = enemigo['id']
+        else:
+            enemy_id = None
+        
+        if enemy_id is not None:
+            Zombie((x, y), [visible_sprites, enemy_sprites], obstaculos_sprites, player, "Zombie", enemy_attack_sprites, enemy_id)
+        else:
+            print("No se pudo obtener el ID del enemigo.")
 
-    :param visible_sprites: Grupo de sprites visibles.
-    :param enemy_sprites: Grupo de sprites de enemigos.
-    :param obstaculos_sprites: Grupo de sprites de obstáculos.
-    :param player: Instancia del jugador.
-    :param numero_oleada: Número de la oleada actual.
-    :param zombies_por_oleada: Cantidad base de zombies por oleada.
-    :param ANCHO: Ancho de la pantalla del juego.
-    :param ALTURA: Altura de la pantalla del juego.
-    :param enemy_attack_sprites: Grupo de sprites de ataque de enemigos.
-    :return: Tiempo de inicio de la oleada y el número de la oleada actualizada.
-    """
-    numero_oleada += 1
-    cantidad_zombies = zombies_por_oleada + (2 * (numero_oleada - 1))
-    for _ in range(cantidad_zombies):
-        x, y = obtener_posicion_aleatoria(obstaculos_sprites, ANCHO, ALTURA)
-        Zombie((x, y), [visible_sprites, enemy_sprites], obstaculos_sprites, player, "Zombie", enemy_attack_sprites)
+    # Asegúrate de devolver valores válidos para tiempo_oleada y numero_oleada
     tiempo_oleada = pygame.time.get_ticks()
+    numero_oleada = num_oleada + 1
     return tiempo_oleada, numero_oleada
 
 def obtener_posicion_aleatoria(obstaculos_sprites, ANCHO, ALTURA):

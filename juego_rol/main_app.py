@@ -10,28 +10,9 @@ from crear_personaje import crear_personaje
 from login import login
 from seleccionar_personaje import seleccionar_personaje
 from consola import Consola
+from generacion_enemigos import *
 
 class Juego:
-    """
-    Clase principal que maneja la lógica y el flujo del juego.
-
-    Atributos:
-        pantalla (Surface): Superficie principal de la ventana del juego.
-        reloj (Clock): Reloj para controlar los FPS del juego.
-        estado (str): Estado actual del juego.
-        personaje (dict or None): Diccionario con los datos del personaje.
-        nivel (Nivel or None): Instancia del nivel actual del juego.
-        raza_index (int): Índice de la raza del personaje.
-        nombre (str): Nombre del personaje.
-        pausado_por_menu (bool): Indica si el juego está pausado por el menú.
-        pausado_por_consola (bool): Indica si el juego está pausado por la consola.
-        mostrar_mensajes (bool): Indica si se deben mostrar mensajes.
-        menu_mensajes (MenuMensajes): Instancia del menú de mensajes.
-        menu_pausa (MenuPausa): Instancia del menú de pausa.
-        font (Font): Fuente utilizada para el texto en el juego.
-        id_cuenta (int or None): ID de la cuenta del usuario.
-        consola (Consola): Instancia de la consola del juego.
-    """
     def __init__(self):
         pygame.init()
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
@@ -40,9 +21,9 @@ class Juego:
         self.estado = 'login'
         self.personaje = None
         self.nivel = None
-        self.raza_index = -1  # Inicializar raza_index
-        self.clase_index = -1  # Inicializar clase_index
-        self.nombre = ''       # Inicializar nombre
+        self.raza_index = -1
+        self.clase_index = -1
+        self.nombre = ''
         self.pausado_por_menu = False
         self.pausado_por_consola = False
         self.mostrar_mensajes = False
@@ -52,37 +33,24 @@ class Juego:
         self.id_cuenta = None
         self.consola = Consola()
 
-        # Configurar detección de teclas
         keyboard.on_press_key("esc", self.toggle_pausa_por_menu)
         keyboard.add_hotkey("ctrl+t", self.toggle_consola)
 
     def toggle_pausa_por_menu(self, e):
-        """
-        Alterna el estado de pausa del juego cuando se presiona la tecla ESC.
-
-        :param e: Evento de teclado.
-        """
-        print("ESC presionado")  # Mensaje de depuración
         self.pausado_por_menu = not self.pausado_por_menu
-        print(f"Estado de pausa por menú: {self.pausado_por_menu}")  # Mensaje de depuración
 
     def toggle_consola(self):
         self.pausado_por_consola = not self.pausado_por_consola
-        self.nivel.mostrar_consola = self.pausado_por_consola
-        self.nivel.consola.activo = self.pausado_por_consola
+        if self.nivel:
+            self.nivel.mostrar_consola = self.pausado_por_consola
+            self.nivel.consola.activo = self.pausado_por_consola
 
         if self.pausado_por_consola:
-            # Evitar que se ingresen caracteres
             pygame.key.set_repeat(0)
         else:
-            # Restaurar la capacidad de ingresar caracteres
             pygame.key.set_repeat(1, 100)
 
-
     def manejar_eventos(self):
-        """
-        Maneja los eventos de Pygame, como cerrar la ventana y cambiar de estado en el juego.
-        """
         eventos = pygame.event.get()
         for evento in eventos:
             if evento.type == pygame.QUIT:
@@ -95,14 +63,14 @@ class Juego:
                 if listo:
                     self.estado = 'juego'
                     if isinstance(self.personaje, dict):
-                        self.nivel = Nivel(self.personaje, self.ir_a_login)
+                        self.nivel = Nivel(self.personaje, self.ir_a_login, self)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'seleccionar_personaje':
                 seleccionar_personaje(self)
                 if self.estado == 'juego':
                     if isinstance(self.personaje, dict):
-                        self.nivel = Nivel(self.personaje, self.ir_a_login)
+                        self.nivel = Nivel(self.personaje, self.ir_a_login, self)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'juego':
@@ -114,10 +82,6 @@ class Juego:
                     self.nivel.manejar_eventos(evento)
 
     def run(self):
-        """
-        Bucle principal del juego que maneja la lógica y la renderización
-        en función del estado actual del juego.
-        """
         while True:
             self.manejar_eventos()
 
@@ -127,7 +91,7 @@ class Juego:
             elif self.estado == 'juego':
                 if self.nivel is None:
                     if isinstance(self.personaje, dict):
-                        self.nivel = Nivel(self.personaje, self.ir_a_login)
+                        self.nivel = Nivel(self.personaje, self.ir_a_login, self)
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
                 if self.pausado_por_menu:
@@ -138,16 +102,12 @@ class Juego:
                 else:
                     self.nivel.run()
 
-                # Mostrar FPS
                 fps = int(self.reloj.get_fps())
                 debug(f"FPS: {fps}", 10, 10, "white")
                 pygame.display.flip()
                 self.reloj.tick(FPS)
 
     def ir_a_login(self):
-        """
-        Cambia el estado del juego a 'login' y resetea el nivel y el personaje.
-        """
         self.estado = 'login'
         self.nivel = None
         self.personaje = None
