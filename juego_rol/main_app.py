@@ -32,6 +32,7 @@ class Juego:
         self.font = pygame.font.Font(None, 36)
         self.id_cuenta = None
         self.consola = Consola()
+        self.muerto = False
 
         keyboard.on_press_key("esc", self.toggle_pausa_por_menu)
         keyboard.add_hotkey("ctrl+t", self.toggle_consola)
@@ -74,38 +75,61 @@ class Juego:
                     else:
                         raise TypeError("self.personaje debe ser un diccionario")
             elif self.estado == 'juego':
-                if self.nivel.mostrar_consola:
-                    self.nivel.consola.manejar_eventos(evento)
-                if self.pausado_por_menu:
-                    self.nivel.menu_pausa.manejar_eventos(evento)
-                if not self.nivel.mostrar_consola and not self.pausado_por_menu:
+                if self.pausado_por_consola:
+                    self.consola.manejar_eventos(evento)
+                elif self.pausado_por_menu:
+                    self.menu_pausa.manejar_eventos(evento)
+                else:
                     self.nivel.manejar_eventos(evento)
+
 
     def run(self):
         while True:
             self.manejar_eventos()
 
-            if self.estado == 'login' or self.estado == 'crear_personaje' or self.estado == 'seleccionar_personaje':
-                pygame.display.flip()
-                self.reloj.tick(FPS)
-            elif self.estado == 'juego':
-                if self.nivel is None:
-                    if isinstance(self.personaje, dict):
-                        self.nivel = Nivel(self.personaje, self.ir_a_login, self)
-                    else:
-                        raise TypeError("self.personaje debe ser un diccionario")
-                if self.pausado_por_menu:
-                    self.nivel.menu_pausa.dibujar(self.pantalla)
-                elif self.pausado_por_consola:
-                    self.nivel.consola.actualizar()
-                    self.nivel.consola.dibujar(self.pantalla)
-                else:
-                    self.nivel.run()
+            if self.nivel:  # Asegúrate de que self.nivel no es None
+                if not self.nivel.muerto:
+                    if not self.pausado_por_menu and not self.pausado_por_consola:
+                        self.nivel.player.entrada()
+                        self.nivel.player.actualizar()
+                        self.nivel.enemy_sprites.update()
+                        self.nivel.attack_sprites.update()
+                        self.nivel.enemy_attack_sprites.update()
+                        self.nivel.power_sprites.update()
+                        self.nivel.item_sprites.update()
 
-                fps = int(self.reloj.get_fps())
-                debug(f"FPS: {fps}", 10, 10, "white")
-                pygame.display.flip()
-                self.reloj.tick(FPS)
+                        if self.nivel.player.salud <= 0:
+                            self.nivel.muerto = True
+
+                        if len(self.nivel.enemy_sprites) == 0:
+                            current_time = pygame.time.get_ticks()
+                            if current_time - self.nivel.ultima_oleada_tiempo >= self.nivel.tiempo_espera_oleada:
+                                self.nivel.numero_oleada += 1
+                                self.nivel.zombies_por_oleada += 2
+                                self.nivel.tiempo_oleada, self.nivel.numero_oleada = generar_oleada(
+                                    self.nivel.visible_sprites, self.nivel.enemy_sprites, self.nivel.obstaculos_sprites, self.nivel.player,
+                                    self.nivel.numero_oleada, self.nivel.zombies_por_oleada, ANCHO, ALTURA, self.nivel.enemy_attack_sprites
+                                )
+                                self.nivel.ultima_oleada_tiempo = current_time
+                                self.nivel.mostrar_nueva_oleada = True
+                                self.nivel.tiempo_nueva_oleada = pygame.time.get_ticks()
+
+                        self.nivel.ajustar_camara()
+                        self.nivel.dibujado_personalizado()
+                    elif self.pausado_por_menu:
+                        self.menu_pausa.dibujar(self.pantalla)
+                    elif self.pausado_por_consola:
+                        self.consola.actualizar()
+                        self.consola.dibujar(self.pantalla)
+                else:
+                    self.nivel.mostrar_pantalla_muerte()
+
+                self.nivel.mostrar_texto_nueva_oleada()
+            else:
+                self.ir_a_login()
+
+            pygame.display.flip()
+            self.reloj.tick(FPS)
 
     def ir_a_login(self):
         self.estado = 'login'

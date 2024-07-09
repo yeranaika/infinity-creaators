@@ -1,3 +1,25 @@
+"""
+Este módulo define las configuraciones y constantes del juego.
+
+Constantes:
+    ANCHO (int): Ancho de la ventana del juego.
+    ALTURA (int): Altura de la ventana del juego.
+    FPS (int): Frames por segundo para la actualización del juego.
+    TA_MOSAICO (int): Tamaño del mosaico en píxeles.
+
+    MAP_MUNDO (list): Mapa del mundo representado como una lista de listas.
+        "x": Representa una piedra.
+        "p": Representa al personaje.
+        " ": Representa espacio libre.
+        "o": Representa un objeto.
+        "z": Representa un zombie.
+
+    Colores:
+        BLANCO (tuple): Color blanco en RGB.
+        NEGRO (tuple): Color negro en RGB.
+        AZUL (tuple): Color azul en RGB.
+        GRIS_CLARO (tuple): Color gris claro en RGB.
+"""
 ANCHO = 1280
 ALTURA = 720
 FPS = 100

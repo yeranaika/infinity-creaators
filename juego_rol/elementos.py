@@ -4,6 +4,13 @@ from DataBase.database import DBmodificaciones
 
 # Clase de la piedra
 class Piedra(pygame.sprite.Sprite):
+    """
+    Clase que representa una piedra en el juego.
+
+    Atributos:
+        image (Surface): La imagen que representa la piedra.
+        rect (Rect): El rectángulo que define la posición de la piedra.
+    """
     def __init__(self, pos, groups):
         super().__init__(groups)
         self.image = pygame.Surface((TA_MOSAICO, TA_MOSAICO))
@@ -13,6 +20,14 @@ class Piedra(pygame.sprite.Sprite):
 
 class Objeto(pygame.sprite.Sprite):
     def __init__(self, pos, groups, tipo, incremento_ataque=0):
+        """
+        Inicializa una nueva instancia de la clase Objeto.
+
+        :param pos: La posición (x, y) donde se colocará el objeto.
+        :param groups: Los grupos de sprites a los que pertenece el objeto.
+        :param tipo: El tipo de objeto.
+        :param incremento_ataque: El valor del incremento de ataque que proporciona el objeto.
+        """
         super().__init__(groups)
         self.image = pygame.Surface((TA_MOSAICO, TA_MOSAICO))
         self.image.fill((255, 255, 0))  # Color amarillo para representar el objeto
@@ -22,12 +37,22 @@ class Objeto(pygame.sprite.Sprite):
         self.incremento_ataque = incremento_ataque
 
     def usar(self, jugador):
+        """
+        Usa el objeto y aplica sus efectos al jugador.
+
+        :param jugador: La instancia del jugador que usará el objeto.
+        """
         if self.tipo == 'espada':
             jugador.ataque += self.incremento_ataque
             # Actualizar las estadísticas en la base de datos
             DBmodificaciones.actualizar_estadisticas_jugador(jugador.id, jugador.ataque, jugador.defensa)
 
     def desequipar(self, jugador):
+        """
+        Desequipa el objeto y elimina sus efectos del jugador.
+
+        :param jugador: La instancia del jugador que desequipa el objeto.
+        """
         if self.tipo == 'espada':
             jugador.ataque -= self.incremento_ataque
             # Actualizar las estadísticas en la base de datos

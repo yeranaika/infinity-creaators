@@ -1,5 +1,5 @@
 import pygame
-from DataBase.database import fetch_query
+from DataBase.database import fetch_query , DBmodificacionEnemigos , DBmodificaciones
 
 class Consola:
     """
@@ -35,6 +35,8 @@ class Consola:
         self.backspace_held = False
         self.backspace_start_time = 0
         self.backspace_interval = 100
+        self.mostrar_consola = False  # Añadir esta línea
+
 
     def manejar_eventos(self, evento):
         """
@@ -95,17 +97,50 @@ class Consola:
             elif partes[0] == "/sql" and len(partes) > 1:
                 query = " ".join(partes[1:])
                 self.ejecutar_sql(query)
+            elif partes[0] == "/stats zombie" and len(partes) > 1:
+                try:
+                    id_zombie = int(partes[1])
+                    self.consultar_zombie(id_zombie)
+                except ValueError:
+                    self.mensajes.append(('system', "ID de zombie no válido."))
+            elif partes[0] == "/ir_login":
+                self.ir_a_login()
             else:
                 self.mensajes.append(('system', f"Comando no reconocido: {comando}"))
         else:
             self.mensajes.append(('system', comando))
 
+    def ir_a_login(self):
+        self.juego.ir_a_login()
+
+    def consultar_zombie(self, id_zombie):
+        enemigo = DBmodificacionEnemigos.obtener_enemigo(id_zombie)
+        if enemigo:
+            self.mensajes.append(('system', f"ID: {enemigo['id']}, Nombre: {enemigo['nombre']}, Salud: {enemigo['salud']}, Ataque: {enemigo['ataque']}, Velocidad: {enemigo['velocidad']}"))
+        else:
+            self.mensajes.append(('system', "Zombie no encontrado."))
+
+
+    def consultar_player(self, id_player):
+        query = f"SELECT * FROM jugador WHERE id_jugador={id_player}"  # Ajustar esto según la estructura de tu base de datos
+        result = fetch_query(query)
+        if result:
+            for row in result:
+                self.mensajes.append(('system', f"ID: {row[0]}, Nombre: {row[2]}, Salud: {row[1]}, Ataque: {row[1]}, Velocidad: {row[3]}"))
+        else:
+            self.mensajes.append(('system', "Jugador no encontrado."))
 
     def mostrar_estadisticas(self):
         """
         Muestra las estadísticas del juego en la consola.
         """
-        self.mensajes.append(('system', "Estadísticas: [Ejemplo] HP: 100, MP: 50"))
+        query = "SELECT * FROM enemigo"  # Ejemplo de consulta SQL
+        result = fetch_query(query)
+        if result:
+            for row in result:
+                self.mensajes.append(('system', str(row)))
+        else:
+            self.mensajes.append(('system', "No se encontraron resultados o error en la consulta."))
 
     def crear_entidad(self, entidad):
         """

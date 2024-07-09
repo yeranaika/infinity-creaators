@@ -7,6 +7,14 @@ from DataBase.database import execute_query, fetch_query
 imagen_fondo = pygame.image.load('juego_rol/texturas/background-level/level-1/background.png')
 
 def crear_personaje(pantalla, juego):
+    """
+    Muestra la interfaz para crear un personaje nuevo y guarda los datos en la base de datos.
+
+    :param pantalla: Superficie de Pygame donde se dibuja la interfaz.
+    :param juego: Instancia del juego.
+    :return: Un diccionario con los datos del personaje, un booleano indicando si está listo, 
+             el índice de la raza, el índice de la clase y el nombre del personaje.
+    """
     reloj = pygame.time.Clock()
     font = pygame.font.Font(None, 36)
     razas = ['Humano', 'Elfo', 'Enano']

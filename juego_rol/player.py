@@ -61,6 +61,7 @@ class Player(pygame.sprite.Sprite):
         self.ataque = personaje['ataque']
         self.defensa = personaje['defensa']
         self.items = []  # Lista para almacenar los objetos recogidos
+        self.item_sprites = item_sprites  # Asegúrate de que esto esté inicializado correctamente
         self.puntuacion = 0
         self.enemies = pygame.sprite.Group()  # Inicializar el grupo de enemigos
 
@@ -84,8 +85,9 @@ class Player(pygame.sprite.Sprite):
         return frames
 
     def manejar_eventos(self, evento):
-        if self.consola_activa:
-            return  # No hacer nada si la consola está activa
+        if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_q and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                self.soltar_objeto()
 
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_i:
