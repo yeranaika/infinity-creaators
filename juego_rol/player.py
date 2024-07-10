@@ -1,10 +1,40 @@
 import pygame
 from configuraciones import *
+from DataBase.database import *
 from enemigos import Zombie
 import sys
 
 class Player(pygame.sprite.Sprite):
+    """
+    Clase que representa al jugador en el juego.
+
+    Atributos:
+        visible_sprites (Group): Grupo de sprites visibles en el juego.
+        nombre (str): Nombre del personaje.
+        velocidad (int): Velocidad de movimiento del personaje.
+        vida (int): Vida actual del personaje.
+        max_vida (int): Vida máxima del personaje.
+        mana (int): Mana actual del personaje.
+        max_mana (int): Mana máximo del personaje.
+        ataque (int): Poder de ataque del personaje.
+        defensa (int): Nivel de defensa del personaje.
+        items (list): Lista de objetos recogidos por el jugador.
+        puntuacion (int): Puntuación del jugador.
+        enemies (Group): Grupo de enemigos en el juego.
+        consola_activa (bool): Indica si la consola está activa.
+    """
     def __init__(self, pos, groups, obstacle_sprites, attack_sprites, power_sprites, item_sprites, personaje):
+        """
+        Inicializa una nueva instancia de la clase Player.
+
+        :param pos: Posición inicial del jugador.
+        :param groups: Grupos de sprites a los que pertenece el jugador.
+        :param obstacle_sprites: Grupo de sprites de obstáculos.
+        :param attack_sprites: Grupo de sprites de ataques.
+        :param power_sprites: Grupo de sprites de poderes.
+        :param item_sprites: Grupo de sprites de objetos.
+        :param personaje: Diccionario con las estadísticas del personaje.
+        """
         super().__init__(groups)
         required_keys = ['nombre', 'velocidad', 'vida', 'mana', 'ataque', 'defensa']
         self.visible_sprites = groups[0]  # Asignar el grupo de sprites visibles
@@ -44,6 +74,9 @@ class Player(pygame.sprite.Sprite):
         self.attack_delay = 180  # Duración del ataque en milisegundos
         self.last_attack_time = 0  # Momento del último ataque
 
+        #id personaje
+        self.id_personaje = personaje['id_personaje']  # Almacenar el ID del personaje
+
         #incrementos
         self.attack_increment = 0.05  # Incremento de ataque del 5%
 
@@ -69,6 +102,12 @@ class Player(pygame.sprite.Sprite):
         self.consola_activa = False  # Nuevo atributo para rastrear si la consola está activa
 
     def load_images(self, filepath):
+        """
+        Carga las imágenes de la animación desde una hoja de sprites.
+
+        :param filepath: Ruta del archivo de la hoja de sprites.
+        :return: Lista de frames de la animación.
+        """
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
         frames = []
         for i in range(6):
@@ -77,6 +116,12 @@ class Player(pygame.sprite.Sprite):
         return frames
 
     def load_attack_images(self, filepath):
+        """
+        Carga las imágenes de la animación de ataque desde una hoja de sprites.
+
+        :param filepath: Ruta del archivo de la hoja de sprites.
+        :return: Lista de frames de la animación de ataque.
+        """
         sprite_sheet = pygame.image.load(filepath).convert_alpha()
         frames = []
         for i in range(6):
@@ -85,6 +130,11 @@ class Player(pygame.sprite.Sprite):
         return frames
 
     def manejar_eventos(self, evento):
+        """
+        Maneja los eventos de Pygame, como teclas presionadas y soltadas.
+
+        :param evento: Evento de Pygame.
+        """
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_q and pygame.key.get_mods() & pygame.KMOD_SHIFT:
                 self.soltar_objeto()
@@ -121,11 +171,21 @@ class Player(pygame.sprite.Sprite):
 
 
     def dibujar_estadisticas(self, pantalla, x, y):
+        """
+        Dibuja las estadísticas del jugador en la pantalla.
+
+        :param pantalla: Superficie donde se dibujan las estadísticas.
+        :param x: Coordenada x para la posición del texto.
+        :param y: Coordenada y para la posición del texto.
+        """
         font = pygame.font.Font(None, 36)
         ataque_text = font.render(f"Ataque: {self.ataque:.2f}", True, (255, 0, 0))  # Texto en rojo
         pantalla.blit(ataque_text, (x, y))
 
     def entrada(self):
+        """
+        Maneja la entrada del usuario para mover al personaje y ejecutar acciones.
+        """
         if self.consola_activa:
             return  # No hacer nada si la consola está activa
 
@@ -155,16 +215,27 @@ class Player(pygame.sprite.Sprite):
             else:
                 self.direction.x = 0
 
-    def recoger_objeto(self):
-        for item in self.item_sprites:
-            if self.rect.colliderect(item.rect):
-                item.kill()
-                item.aplicar_efecto(self)
-                print(f"Has recogido un {item.tipo}.")
-                return
-            
+        def recoger_objeto(self):
+            for item in self.item_sprites:
+                if self.rect.colliderect(item.rect):
+                    self.items.append(item)
+                    item.kill()
+                    if hasattr(item, 'incremento_daño'):
+                        self.ataque += item.incremento_daño
+                        # Actualizar el ataque del jugador en la base de datos
+                        DBmodificaciones.actualizar_estadisticas_jugador(self.id_personaje, self.ataque, self.defensa)
+                    print(f"Has recogido un {item.tipo}. Presiona 'shift+Q' para soltar el equipo")
+                    return
+                
 
     def dibujar_cooldown_atk(self, pantalla, x, y):
+        """
+        Dibuja el tiempo de cooldown del ataque en la pantalla.
+
+        :param pantalla: Superficie donde se dibuja el cooldown.
+        :param x: Coordenada x para la posición del texto.
+        :param y: Coordenada y para la posición del texto.
+        """
         current_time = pygame.time.get_ticks()
         time_left = max(0, (self.attack_delay - (current_time - self.last_attack_time)) / 1000)
         cooldown_text = f"{time_left:.1f}"
@@ -176,6 +247,9 @@ class Player(pygame.sprite.Sprite):
         pygame.draw.rect(pantalla, (255, 255, 255), attack_rect)
 
     def crear_ataque(self):
+        """
+        Crea un ataque basado en la dirección actual del personaje.
+        """
         if not self.groups():
             return  # Si no hay grupos, no se puede crear el ataque
 
@@ -194,6 +268,9 @@ class Player(pygame.sprite.Sprite):
 
 
     def crear_poder(self):
+        """
+        Crea un poder especial basado en la dirección actual del personaje.
+        """
         offset = pygame.math.Vector2(0, 0)
         direction = pygame.math.Vector2(0, 0)
 
@@ -214,6 +291,13 @@ class Player(pygame.sprite.Sprite):
         Fireball(poder_position, direction, [self.power_sprites, self.groups()[0]], self.ataque)
 
     def dibujar_cooldownPW(self, pantalla, x, y):
+        """
+        Dibuja el tiempo de cooldown del poder especial en la pantalla.
+
+        :param pantalla: Superficie donde se dibuja el cooldown.
+        :param x: Coordenada x para la posición del texto.
+        :param y: Coordenada y para la posición del texto.
+        """
         current_time = pygame.time.get_ticks()
         time_left = max(0, (self.power_cooldown - (current_time - self.last_power_time)) / 1000)
         cooldown_text = f"{time_left:.1f}"
@@ -225,6 +309,9 @@ class Player(pygame.sprite.Sprite):
         pygame.draw.rect(pantalla, (255, 0, 0), power_rect)
 
     def mover(self):
+        """
+        Mueve al jugador en la dirección actual y maneja las colisiones.
+        """
         if self.direction.magnitude() != 0:
             self.direction = self.direction.normalize()
 
@@ -237,6 +324,11 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = self.hitbox.center
 
     def colisiones(self, direccion):
+        """
+        Maneja las colisiones del jugador con los obstáculos.
+
+        :param direccion: Dirección del movimiento ('horizontal' o 'vertical').
+        """
         for sprite in self.obstacle_sprites:
             if sprite.rect.colliderect(self.hitbox):
                 if direccion == 'horizontal':
@@ -251,11 +343,17 @@ class Player(pygame.sprite.Sprite):
                         self.hitbox.top = sprite.rect.bottom
 
     def check_collisions_with_enemies(self):
+        """
+        Verifica las colisiones del jugador con los enemigos y maneja los ataques.
+        """
         for sprite in self.enemies:
             if sprite.rect.colliderect(self.rect):
                 sprite.attack_player()
 
     def animar(self):
+        """
+        Actualiza la animación del jugador.
+        """
         if self.is_attacking:
             self.attack_frame_index += self.attack_animation_speed
             if self.attack_frame_index >= len(self.attack_animations[self.current_animation]):
@@ -270,12 +368,21 @@ class Player(pygame.sprite.Sprite):
         self.image = self.animations[self.current_animation][int(self.animation_index)]
 
     def recibir_daño(self, cantidad):
+        """
+        Actualiza la animación del jugador.
+        """
         self.salud -= cantidad
         if self.salud <= 0:
             self.salud = 0
             self.kill()  # Opcional, si quieres eliminar el sprite del jugador
 
     def dibujar_barra_vida(self, pantalla, camera):
+        """
+        Dibuja la barra de vida del jugador sobre el personaje.
+
+        :param pantalla: Superficie donde se dibuja la barra de vida.
+        :param camera: Vector de la cámara para ajustar la posición de la barra de vida.
+        """
         ancho_barra = 100
         alto_barra = 5
         x_barra = self.rect.centerx - ancho_barra // 2 - camera.x
@@ -295,6 +402,9 @@ class Player(pygame.sprite.Sprite):
         pantalla.blit(text_surface, text_rect)
 
     def actualizar(self):
+        """
+        Actualiza el estado del jugador en cada frame.
+        """
         self.entrada()
         if not self.is_attacking:
             self.mover()
@@ -302,23 +412,35 @@ class Player(pygame.sprite.Sprite):
         self.check_collisions_with_enemies()
 
     def recoger_objeto(self):
+        """
+        Recoge un objeto si colisiona con él y aplica su efecto.
+        """
         for item in self.item_sprites:
             if self.rect.colliderect(item.rect):
                 item.kill()
-                print(f"Has recogido un item. Presiona 'shift+Q' para soltar el equipo")
+                item.usar(self)  # Aplica el efecto del objeto
+                self.items.append(item)
+                print(f"Has recogido un {item.tipo}.")
                 return
 
     def soltar_objeto(self):
+        """
+        Suelta el último objeto recogido.
+        """
         if self.items:
             item = self.items.pop()
             item.rect.topleft = self.rect.topleft  # Colocar el objeto en la posición del jugador
             self.item_sprites.add(item)
             item.add(self.groups()[0])
             item.add(self.visible_sprites)  # Asegurarse de que se dibuje
+            item.desequipar(self)  # Quita el efecto del objeto
             print("Has soltado un objeto.")
 
 
     def mostrar_inventario(self):
+        """
+        Muestra el inventario del jugador en la pantalla.
+        """
         pantalla = pygame.display.get_surface()
         font = pygame.font.Font(None, 36)
         pantalla.fill((0, 0, 0))  # Fondo negro para el inventario
@@ -341,6 +463,9 @@ class Player(pygame.sprite.Sprite):
                     sys.exit()
 
     def equipar_objeto(self):
+        """
+        Equipa un objeto seleccionado del inventario.
+        """
         item_idx = int(input("Ingresa el número del objeto que deseas equipar: ")) - 1
         if 0 <= item_idx < len(self.items):
             item = self.items[item_idx]
@@ -350,6 +475,9 @@ class Player(pygame.sprite.Sprite):
             print(f"Has equipado {item.nombre}.")
 
     def usar_objeto(self):
+        """
+        Usa un objeto seleccionado del inventario.
+        """
         item_idx = int(input("Ingresa el número del objeto que deseas usar: ")) - 1
         if 0 <= item_idx < len(self.items):
             item = self.items[item_idx]
@@ -357,7 +485,27 @@ class Player(pygame.sprite.Sprite):
             print(f"Has usado {item.nombre}.")
 
 class Attack(pygame.sprite.Sprite):
+    """
+    Clase que representa un ataque en el juego.
+
+    Atributos:
+        frames (list): Lista de frames de la animación del ataque.
+        frame_index (int): Índice del frame actual.
+        animation_speed (float): Velocidad de la animación del ataque.
+        ataque (int): Daño del ataque.
+        lifetime (int): Duración del ataque en frames.
+    """
     def __init__(self, pos, direction, groups, animation_frames, animation_speed, ataque):
+        """
+        Inicializa una nueva instancia de la clase Attack.
+
+        :param pos: Posición inicial del ataque.
+        :param direction: Dirección del ataque.
+        :param groups: Grupos de sprites a los que pertenece el ataque.
+        :param animation_frames: Frames de la animación del ataque.
+        :param animation_speed: Velocidad de la animación del ataque.
+        :param ataque: Daño del ataque.
+        """
         super().__init__(groups)
         self.frames = animation_frames
         self.frame_index = 0
@@ -370,6 +518,9 @@ class Attack(pygame.sprite.Sprite):
         self.hitbox = self.rect.inflate(-45, -45)
 
     def update(self):
+        """
+        Actualiza el estado del ataque en cada frame.
+        """
         self.frame_index += self.animation_speed
         if self.frame_index >= len(self.frames):
             self.frame_index = 0
@@ -388,10 +539,45 @@ class Attack(pygame.sprite.Sprite):
                     self.frame_index = 0  # Reiniciar la animación del ataque
 
 class Fireball(pygame.sprite.Sprite):
+    """
+    Clase que representa una bola de fuego en el juego.
+
+    Atributos:
+        images (dict): Diccionario de imágenes para cada dirección de la bola de fuego.
+        direction (Vector2): Dirección de la bola de fuego.
+        ataque (int): Daño de la bola de fuego.
+        hitbox (Rect): Hitbox de la bola de fuego.
+        lifetime (int): Duración de la bola de fuego en frames.
+    """
     def __init__(self, pos, direction, groups, ataque):
+        """
+        Inicializa una nueva instancia de la clase Fireball.
+
+        :param pos: Posición inicial de la bola de fuego.
+        :param direction: Dirección de la bola de fuego.
+        :param groups: Grupos de sprites a los que pertenece la bola de fuego.
+        :param ataque: Daño de la bola de fuego.
+        """
         super().__init__(groups)
-        self.image = pygame.Surface((20, 20))
-        self.image.fill((255, 0, 0))
+        
+        # Diccionario de imágenes para cada dirección
+        self.images = {
+            'up': pygame.image.load("juego_rol/texturas/poderes/firewall/fuego-arriba.png").convert_alpha(),
+            'down': pygame.image.load("juego_rol/texturas/poderes/firewall/fuego-abajo.png").convert_alpha(),
+            'left': pygame.image.load("juego_rol/texturas/poderes/firewall/fuego-izquierda.png").convert_alpha(),
+            'right': pygame.image.load("juego_rol/texturas/poderes/firewall/fuego-derecha.png").convert_alpha()
+        }
+        
+        # Seleccionar la imagen adecuada según la dirección
+        if direction.y < 0:
+            self.image = self.images['up']
+        elif direction.y > 0:
+            self.image = self.images['down']
+        elif direction.x < 0:
+            self.image = self.images['left']
+        elif direction.x > 0:
+            self.image = self.images['right']
+
         self.rect = self.image.get_rect(center=pos)
         self.direction = direction.normalize()
         self.speed = 18

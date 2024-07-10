@@ -1,6 +1,6 @@
 import pygame
 import sys
-from level import Nivel
+from level import *
 from DataBase.database import execute_query, fetch_query
 
 # Cargar imagen de fondo
@@ -51,13 +51,13 @@ def crear_personaje(pantalla, juego):
 
                 if boton_confirmar.collidepoint(evento.pos):
                     if raza_index != -1 and clase_index != -1 and nombre:
-                        query_clase = "SELECT id_clase FROM Clase WHERE nombre_clase = %s"
+                        query_clase = "SELECT id_clase FROM Clase WHERE nombre_clase = ?"
                         clase_result = fetch_query(query_clase, (clases[clase_index],))
                         id_clase = clase_result[0][0] if clase_result else None
 
                         query = """
                         INSERT INTO Personaje (id_cuenta, nombre_personaje, id_raza, id_clase, nivel, estado, vida, mana, ataque, defensa, velocidad)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """
                         params = (juego.id_cuenta, nombre, raza_index + 1, id_clase, 1, 'Vivo', 100, 50, 10, 5, 5)
                         execute_query(query, params)
@@ -81,7 +81,7 @@ def crear_personaje(pantalla, juego):
 
                         listo = True
                         juego.estado = 'seleccionar_personaje'
-                        juego.nivel = Nivel(personaje, juego.ir_a_login)
+                        juego.nivel = Nivel(personaje, juego.ir_a_login , juego)
                         juego.raza_index = raza_index
                         juego.clase_index = clase_index
                         juego.nombre = nombre

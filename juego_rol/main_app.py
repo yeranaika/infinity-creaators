@@ -1,3 +1,4 @@
+# main_app.py
 import pygame
 import sys
 import keyboard
@@ -13,7 +14,32 @@ from consola import Consola
 from generacion_enemigos import *
 
 class Juego:
+    """
+    Clase principal del juego que gestiona los estados y la lógica principal.
+
+    Atributos:
+        pantalla (Surface): La superficie principal donde se dibuja el juego.
+        reloj (Clock): El reloj del juego para manejar la tasa de fotogramas.
+        estado (str): El estado actual del juego (login, crear_personaje, seleccionar_personaje, juego).
+        personaje (dict): Información del personaje del jugadora
+        nivel (Nivel): La instancia del nivel actual del juego.
+        raza_index (int): Índice de la raza seleccionada.
+        clase_index (int): Índice de la clase seleccionada.
+        nombre (str): Nombre del personaje.
+        pausado_por_menu (bool): Indica si el juego está pausado por el menú.
+        pausado_por_consola (bool): Indica si el juego está pausado por la consola.
+        mostrar_mensajes (bool): Indica si se deben mostrar mensajes.
+        menu_mensajes (MenuMensajes): Instancia del menú de mensajes.
+        menu_pausa (MenuPausa): Instancia del menú de pausa.
+        font (Font): Fuente utilizada para el texto en el juego.
+        id_cuenta (int): ID de la cuenta del usuario.
+        consola (Consola): Instancia de la consola del juego.
+        muerto (bool): Indica si el jugador está muerto.
+    """
     def __init__(self):
+        """
+        Inicializa una nueva instancia de la clase Juego.
+        """
         pygame.init()
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.reloj = pygame.time.Clock()
@@ -31,27 +57,40 @@ class Juego:
         self.menu_pausa = MenuPausa()
         self.font = pygame.font.Font(None, 36)
         self.id_cuenta = None
-        self.consola = Consola()
+        self.consola = Consola(self)
         self.muerto = False
 
         keyboard.on_press_key("esc", self.toggle_pausa_por_menu)
         keyboard.add_hotkey("ctrl+t", self.toggle_consola)
 
     def toggle_pausa_por_menu(self, e):
+        """
+        Alterna el estado de pausa del juego por el menú.
+
+        :param e: Evento de teclado.
+        """
         self.pausado_por_menu = not self.pausado_por_menu
 
     def toggle_consola(self):
+        """
+        Alterna el estado de la consola del juego.
+        """
         self.pausado_por_consola = not self.pausado_por_consola
         if self.nivel:
             self.nivel.mostrar_consola = self.pausado_por_consola
             self.nivel.consola.activo = self.pausado_por_consola
+            if self.pausado_por_consola:
+                self.nivel.consola.focus_input()
 
         if self.pausado_por_consola:
             pygame.key.set_repeat(0)
         else:
-            pygame.key.set_repeat(1, 100)
+            pygame.key.set_repeat(1, 100)   
 
     def manejar_eventos(self):
+        """
+        Maneja todos los eventos del juego, como clics y entrada de teclado.
+        """
         eventos = pygame.event.get()
         for evento in eventos:
             if evento.type == pygame.QUIT:
@@ -77,17 +116,28 @@ class Juego:
             elif self.estado == 'juego':
                 if self.pausado_por_consola:
                     self.consola.manejar_eventos(evento)
+                    if evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
+                        print(f"Contenido de self.personaje: {self.personaje}")  # Añadido para depuración
+                        if 'id_personaje' in self.personaje:
+                            print(f"Ejecutando comando con ID del jugador: {self.personaje['id_personaje']}")
+                            self.consola.ejecutar_comando(self.consola.texto, self.personaje['id_personaje'])
+                        else:
+                            print("Error: 'id_personaje' no encontrado en self.personaje")
+                        self.consola.texto = ''
                 elif self.pausado_por_menu:
-                    self.menu_pausa.manejar_eventos(evento)
+                    self.nivel.menu_pausa.manejar_eventos(evento)
                 else:
                     self.nivel.manejar_eventos(evento)
 
 
     def run(self):
+        """
+        Ejecuta el bucle principal del juego.
+        """
         while True:
             self.manejar_eventos()
 
-            if self.nivel:  # Asegúrate de que self.nivel no es None
+            if self.nivel:
                 if not self.nivel.muerto:
                     if not self.pausado_por_menu and not self.pausado_por_consola:
                         self.nivel.player.entrada()
@@ -117,14 +167,15 @@ class Juego:
                         self.nivel.ajustar_camara()
                         self.nivel.dibujado_personalizado()
                     elif self.pausado_por_menu:
-                        self.menu_pausa.dibujar(self.pantalla)
+                        self.nivel.menu_pausa.dibujar(self.pantalla)
                     elif self.pausado_por_consola:
                         self.consola.actualizar()
                         self.consola.dibujar(self.pantalla)
                 else:
                     self.nivel.mostrar_pantalla_muerte()
 
-                self.nivel.mostrar_texto_nueva_oleada()
+                if self.nivel:
+                    self.nivel.mostrar_texto_nueva_oleada()
             else:
                 self.ir_a_login()
 
@@ -132,6 +183,9 @@ class Juego:
             self.reloj.tick(FPS)
 
     def ir_a_login(self):
+        """
+        Cambia el estado del juego a 'login' y reinicia los atributos relacionados con el nivel y el personaje.
+        """
         self.estado = 'login'
         self.nivel = None
         self.personaje = None

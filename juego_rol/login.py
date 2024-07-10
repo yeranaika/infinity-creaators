@@ -21,7 +21,7 @@ def verificar_usuario(usuario, contrasena):
     :param contrasena: Contraseña del usuario.
     :return: Resultado de la consulta si el usuario existe, de lo contrario None.
     """
-    query = "SELECT * FROM Cuenta WHERE usuario = %s AND contraseña = %s"
+    query = "SELECT * FROM Cuenta WHERE usuario = ? AND contraseña = ?"
     result = fetch_query(query, (usuario, contrasena))
     return result
 
@@ -32,7 +32,7 @@ def verificar_personajes(id_cuenta):
     :param id_cuenta: ID de la cuenta.
     :return: Resultado de la consulta con los personajes asociados a la cuenta.
     """
-    query = "SELECT * FROM Personaje WHERE id_cuenta = %s"
+    query = "SELECT * FROM Personaje WHERE id_cuenta = ?"
     result = fetch_query(query, (id_cuenta,))
     return result
 

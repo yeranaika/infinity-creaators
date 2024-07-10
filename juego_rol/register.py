@@ -20,7 +20,7 @@ def agregar_usuario(usuario, contrasena):
     :param usuario: Nombre de usuario.
     :param contrasena: Contraseña del usuario.
     """
-    query = "INSERT INTO Cuenta (usuario, fecha_creacion, rol, contraseña) VALUES (%s, NOW(), 'Jugador', %s)"
+    query = "INSERT INTO Cuenta (usuario, fecha_creacion, rol, contraseña) VALUES (?, datetime('now'), 'Jugador', ?)"
     execute_query(query, (usuario, contrasena))
 
 def dibujar_texto(texto, fuente, color, superficie, x, y):

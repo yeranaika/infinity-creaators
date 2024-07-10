@@ -16,7 +16,7 @@ def obtener_personajes(id_cuenta):
     :param id_cuenta: ID de la cuenta.
     :return: Resultado de la consulta con los personajes asociados a la cuenta.
     """
-    query = "SELECT id_personaje, nombre_personaje FROM Personaje WHERE id_cuenta = %s"
+    query = "SELECT id_personaje, nombre_personaje FROM Personaje WHERE id_cuenta = ?"
     result = fetch_query(query, (id_cuenta,))
     return result
 
@@ -50,7 +50,7 @@ def seleccionar_personaje(juego):
                         query = """
                         SELECT id_personaje, nombre_personaje, vida, mana, ataque, defensa, velocidad
                         FROM Personaje
-                        WHERE id_personaje = %s
+                        WHERE id_personaje = ?
                         """
                         result = fetch_query(query, (personaje_seleccionado[0],))
                         if result:

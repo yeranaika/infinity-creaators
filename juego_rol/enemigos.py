@@ -3,7 +3,50 @@ import pygame
 from DataBase.database import DBmodificacionEnemigos as db
 
 class Zombie(pygame.sprite.Sprite):
+    """
+    Clase que representa un zombie en el juego.
+
+    Atributos:
+        nombre (str): Nombre del zombie.
+        enemy_id (int): ID del enemigo en la base de datos.
+        salud (int): Salud actual del zombie.
+        ataque (int): Valor de ataque del zombie.
+        velocidad (int): Velocidad de movimiento del zombie.
+        max_salud (int): Salud máxima del zombie.
+        animations (dict): Diccionario de animaciones de movimiento del zombie.
+        attack_animations (dict): Diccionario de animaciones de ataque del zombie.
+        image (Surface): Imagen actual del zombie.
+        rect (Rect): Rectángulo que define la posición del zombie.
+        direction (Vector2): Vector que define la dirección de movimiento del zombie.
+        speed (int): Velocidad de movimiento del zombie.
+        current_animation (str): Nombre de la animación actual del zombie.
+        animation_index (float): Índice actual de la animación del zombie.
+        animation_speed (float): Velocidad de reproducción de la animación.
+        moving (bool): Indica si el zombie se está moviendo.
+        attack_animation_speed (float): Velocidad de reproducción de la animación de ataque.
+        obstacle_sprites (Group): Grupo de sprites que representan obstáculos.
+        player (Player): Instancia del jugador.
+        enemy_attack_sprites (Group): Grupo de sprites que representan ataques enemigos.
+        hitbox (Rect): Rectángulo de colisión del zombie.
+        last_attack_time (int): Tiempo del último ataque.
+        attack_delay (int): Tiempo de espera entre ataques.
+        attacking (bool): Indica si el zombie está atacando.
+        attack_range (int): Rango de ataque del zombie.
+        attack_sprite (Sprite): Sprite de ataque del zombie.
+        detected_player (bool): Indica si el jugador ha sido detectado.
+    """
     def __init__(self, pos, groups, obstacle_sprites, player, nombre, enemy_attack_sprites, enemy_id):
+        """
+        Inicializa una nueva instancia de la clase Zombie.
+
+        :param pos: Posición inicial del zombie.
+        :param groups: Grupos de sprites a los que pertenece el zombie.
+        :param obstacle_sprites: Grupo de sprites que representan obstáculos.
+        :param player: Instancia del jugador.
+        :param nombre: Nombre del zombie.
+        :param enemy_attack_sprites: Grupo de sprites que representan ataques enemigos.
+        :param enemy_id: ID del enemigo en la base de datos.
+        """
         super().__init__(groups)
         self.nombre = nombre
         self.enemy_id = enemy_id
@@ -55,6 +98,12 @@ class Zombie(pygame.sprite.Sprite):
         self.detected_player = False
 
     def load_images(self, filepath):
+        """
+        Carga imágenes desde un archivo de spritesheet.
+
+        :param filepath: Ruta al archivo de spritesheet.
+        :return: Lista de imágenes.
+        """
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"No se encontró el archivo: {filepath}")
         print(f"Cargando imagen desde: {filepath}")
@@ -66,6 +115,9 @@ class Zombie(pygame.sprite.Sprite):
         return frames
 
     def detect_player(self):
+        """
+        Detecta si el jugador está dentro del rango de detección del zombie.
+        """
         player_vector = pygame.math.Vector2(self.player.rect.center)
         enemy_vector = pygame.math.Vector2(self.rect.center)
         distance_to_player = player_vector.distance_to(enemy_vector)
@@ -73,6 +125,9 @@ class Zombie(pygame.sprite.Sprite):
             self.detected_player = True
 
     def move_towards_player(self):
+        """
+        Mueve al zombie hacia la posición del jugador si está detectado.
+        """
         if self.detected_player:
             player_vector = pygame.math.Vector2(self.player.rect.center)
             enemy_vector = pygame.math.Vector2(self.rect.center)
@@ -89,6 +144,11 @@ class Zombie(pygame.sprite.Sprite):
                 self.moving = False
 
     def collision(self, direction):
+        """
+        Maneja las colisiones del zombie con obstáculos.
+
+        :param direction: Dirección de la colisión ('horizontal' o 'vertical').
+        """
         for sprite in self.obstacle_sprites:
             if sprite.rect.colliderect(self.hitbox):
                 if direction == 'horizontal':
@@ -103,6 +163,11 @@ class Zombie(pygame.sprite.Sprite):
                         self.hitbox.top = sprite.rect.bottom
 
     def recibir_daño(self, cantidad):
+        """
+        Reduce la salud del zombie al recibir daño.
+
+        :param cantidad: Cantidad de daño recibido.
+        """
         self.salud -= cantidad
         db.actualizar_estadisticas_enemigo(self.enemy_id, self.salud, self.ataque, self.velocidad)
         if self.salud <= 0:
@@ -112,6 +177,9 @@ class Zombie(pygame.sprite.Sprite):
             self.retroceder()
 
     def retroceder(self):
+        """
+        Hace que el zombie retroceda al recibir daño.
+        """
         if self.direction.length() > 0:
             self.direction = -self.direction
             self.hitbox.x += self.direction.x * self.speed * 10
@@ -122,6 +190,9 @@ class Zombie(pygame.sprite.Sprite):
             self.direction = -self.direction
 
     def animar(self):
+        """
+        Actualiza la animación del zombie según su estado actual.
+        """
         if self.detected_player:
             self.animation_index += self.animation_speed
             if self.attacking:
@@ -138,6 +209,9 @@ class Zombie(pygame.sprite.Sprite):
                 self.image = self.animations[self.current_animation][int(self.animation_index)]
 
     def attack_player(self):
+        """
+        Realiza un ataque al jugador si está dentro del rango de ataque.
+        """
         if self.detected_player:
             player_vector = pygame.math.Vector2(self.player.rect.center)
             enemy_vector = pygame.math.Vector2(self.rect.center)
@@ -152,6 +226,9 @@ class Zombie(pygame.sprite.Sprite):
                     self.crear_ataque()
 
     def crear_ataque(self):
+        """
+        Crea un sprite de ataque para el zombie.
+        """
         offset = pygame.math.Vector2(0, 0)
         if self.current_animation == 'attack_up':
             offset = pygame.math.Vector2(0, -32)
@@ -166,6 +243,9 @@ class Zombie(pygame.sprite.Sprite):
         self.attack_sprite = Attack(attack_position, self.direction, [self.enemy_attack_sprites, self.groups()[0]], self.attack_animations[self.current_animation], self.attack_animation_speed + 1, self.player)
 
     def set_attack_animation(self):
+        """
+        Configura la animación de ataque del zombie según su dirección.
+        """
         if self.direction.y < 0:
             self.current_animation = 'attack_up'
         elif self.direction.y > 0:
@@ -176,6 +256,9 @@ class Zombie(pygame.sprite.Sprite):
             self.current_animation = 'attack_right'
 
     def set_movement_animation(self):
+        """
+        Configura la animación de movimiento del zombie según su dirección.
+        """
         if self.direction.y < 0:
             self.current_animation = 'up'
         elif self.direction.y > 0:
@@ -186,6 +269,12 @@ class Zombie(pygame.sprite.Sprite):
             self.current_animation = 'right'
 
     def dibujar_barra_vida(self, pantalla, camera):
+        """
+        Dibuja la barra de vida del zombie en la pantalla.
+
+        :param pantalla: Superficie en la que se dibuja la barra de vida.
+        :param camera: Objeto de la cámara para ajustar la posición en pantalla.
+        """
         ancho_barra = 100
         alto_barra = 5
         x_barra = self.rect.centerx - ancho_barra // 2 - camera.x
@@ -202,6 +291,9 @@ class Zombie(pygame.sprite.Sprite):
         pantalla.blit(text_surface, text_rect)
 
     def update(self):
+        """
+        Actualiza el estado del zombie, incluyendo detección de jugador, movimiento, ataque y animación.
+        """
         self.detect_player()
         self.move_towards_player()
         self.attack_player()
@@ -210,7 +302,31 @@ class Zombie(pygame.sprite.Sprite):
         self.animar()
 
 class Attack(pygame.sprite.Sprite):
+    """
+    Clase que representa un ataque del zombie en el juego.
+
+    Atributos:
+        frames (list): Lista de imágenes de la animación de ataque.
+        frame_index (float): Índice actual de la animación de ataque.
+        animation_speed (float): Velocidad de reproducción de la animación de ataque.
+        image (Surface): Imagen actual del ataque.
+        rect (Rect): Rectángulo que define la posición del ataque.
+        direction (Vector2): Vector que define la dirección de movimiento del ataque.
+        player (Player): Instancia del jugador.
+        lifetime (int): Duración de vida del ataque en frames.
+        hitbox (Rect): Rectángulo de colisión del ataque.
+    """
     def __init__(self, pos, direction, groups, animation_frames, animation_speed, player):
+        """
+        Inicializa una nueva instancia de la clase Attack.
+
+        :param pos: Posición inicial del ataque.
+        :param direction: Dirección de movimiento del ataque.
+        :param groups: Grupos de sprites a los que pertenece el ataque.
+        :param animation_frames: Lista de imágenes de la animación de ataque.
+        :param animation_speed: Velocidad de reproducción de la animación de ataque.
+        :param player: Instancia del jugador.
+        """
         super().__init__(groups)
         self.frames = animation_frames
         self.frame_index = 0
@@ -223,6 +339,9 @@ class Attack(pygame.sprite.Sprite):
         self.hitbox = self.rect.inflate(-25, -25)
 
     def update(self):
+        """
+        Actualiza el estado del ataque, incluyendo la animación y la colisión con el jugador.
+        """
         self.frame_index += self.animation_speed
         if self.frame_index >= len(self.frames):
             self.kill()

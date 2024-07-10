@@ -1,16 +1,57 @@
 import pygame
 import sys
 from configuraciones import *
-from elementos import Piedra, Objeto
+from elementos import *
 from player import Player
 from generacion_enemigos import generar_oleada
 from menu_pausa import MenuPausa
 from consola import Consola
-from DataBase.database import *
-
+from DataBase.database import DBmodificacionEnemigos as db
 class Nivel:
+    """
+    Clase que representa un nivel en el juego.
+
+    Atributos:
+        personaje (dict): Información del personaje del jugador.
+        ir_a_login_callback (callable): Función de callback para regresar a la pantalla de login.
+        juego (object): Instancia del juego principal.
+        pantalla (Surface): Superficie donde se dibuja el juego.
+        backgroundlevel (Surface): Imagen de fondo del nivel.
+        llamar_vizua (Surface): Superficie principal del juego.
+        visible_sprites (VSortCameraGroup): Grupo de sprites visibles.
+        obstaculos_sprites (Group): Grupo de sprites de obstáculos.
+        attack_sprites (Group): Grupo de sprites de ataques.
+        power_sprites (Group): Grupo de sprites de poderes.
+        item_sprites (Group): Grupo de sprites de objetos.
+        enemy_sprites (Group): Grupo de sprites de enemigos.
+        enemy_attack_sprites (Group): Grupo de sprites de ataques de enemigos.
+        camera (Vector2): Vector de la cámara.
+        font (Font): Fuente utilizada para el texto en el juego.
+        numero_oleada (int): Número de la oleada actual.
+        zombies_por_oleada (int): Número de zombies por oleada.
+        tiempo_espera_oleada (int): Tiempo de espera entre oleadas.
+        ultima_oleada_tiempo (int): Tiempo de la última oleada.
+        mostrar_nueva_oleada (bool): Indica si se debe mostrar el texto de nueva oleada.
+        tiempo_nueva_oleada (int): Tiempo en que se comenzó a mostrar la nueva oleada.
+        menu_pausa (MenuPausa): Instancia del menú de pausa.
+        pausado (bool): Indica si el juego está pausado.
+        mostrar_consola (bool): Indica si se debe mostrar la consola.
+        consola (Consola): Instancia de la consola del juego.
+        muerto (bool): Indica si el jugador está muerto.
+    """
     def __init__(self, personaje, ir_a_login_callback, juego):
+        """
+        Inicializa una nueva instancia de la clase Nivel.
+
+        :param personaje: Información del personaje del jugador.
+        :param ir_a_login_callback: Función de callback para regresar a la pantalla de login.
+        :param juego: Instancia del juego principal.
+        """
         pygame.init()
+
+        self.sprites = pygame.sprite.Group()
+        self.objetos = pygame.sprite.Group() 
+        
         self.pantalla = pygame.display.set_mode((ANCHO, ALTURA))
         self.backgroundlevel = pygame.image.load("juego_rol/texturas/background-level/level-1/background.png").convert_alpha()
         self.llamar_vizua = pygame.display.get_surface()
@@ -42,13 +83,16 @@ class Nivel:
         self.pausado = False
         self.pausado_por_consola = False
         self.mostrar_consola = False
-        self.consola = Consola()
+        self.consola = Consola(juego)
 
         self.muerto = False  # Asegúrate de inicializar 'muerto'
 
         self.creacion_mapa()
 
     def creacion_mapa(self):
+        """
+        Crea el mapa del nivel a partir de la matriz MAP_MUNDO.
+        """
         self.muerto = False
         for fila_ind, fila in enumerate(MAP_MUNDO):
             for columnas_ind, columna in enumerate(fila):
@@ -62,9 +106,14 @@ class Nivel:
                     self.player = Player((x, y), [self.visible_sprites], self.obstaculos_sprites, self.attack_sprites, self.power_sprites, self.item_sprites, self.personaje)
 
                 if columna == "o":
-                    Objeto((x, y), [self.visible_sprites, self.item_sprites], 'espada', 0.05)
+                    Espada((x, y), [self.visible_sprites, self.item_sprites])
 
     def manejar_eventos(self, evento):
+        """
+        Maneja los eventos de Pygame, como clics y entrada de teclado.
+
+        :param evento: Evento de Pygame.
+        """
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
@@ -78,6 +127,9 @@ class Nivel:
 
 
     def toggle_pausa(self):
+        """
+        Alterna el estado de pausa del juego.
+        """
         self.pausado = not self.pausado
         if self.pausado:
             self.menu_pausa.reset()
@@ -85,6 +137,11 @@ class Nivel:
 
 
     def pantalla_muerte(self):
+        """
+        Crea la pantalla de muerte del jugador.
+
+        :return: Elementos de la pantalla de muerte (botones y textos).
+        """
         font = pygame.font.Font(None, 74)
         texto_muerte = font.render('Has muerto', True, (255, 0, 0))
         texto_rect = texto_muerte.get_rect(center=(ANCHO // 2, ALTURA // 2 - 50))
@@ -99,6 +156,16 @@ class Nivel:
         return boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu
 
     def dibujar_pantalla_muerte(self, boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu):
+        """
+        Dibuja la pantalla de muerte del jugador.
+
+        :param boton_reaparecer: Rectángulo del botón de reaparecer.
+        :param boton_menu: Rectángulo del botón de salir al menú.
+        :param texto_muerte: Superficie del texto de muerte.
+        :param texto_rect: Rectángulo del texto de muerte.
+        :param texto_reaparecer: Superficie del texto de reaparecer.
+        :param texto_menu: Superficie del texto de salir al menú.
+        """
         pygame.draw.rect(self.pantalla, (0, 255, 0), boton_reaparecer)
         pygame.draw.rect(self.pantalla, (255, 0, 0), boton_menu)
 
@@ -110,6 +177,13 @@ class Nivel:
         self.pantalla.blit(texto_menu, texto_menu_rect)
 
     def manejar_eventos_muerte(self, boton_reaparecer, boton_menu):
+        """
+        Maneja los eventos de la pantalla de muerte.
+
+        :param boton_reaparecer: Rectángulo del botón de reaparecer.
+        :param boton_menu: Rectángulo del botón de salir al menú.
+        :return: True si se realiza alguna acción, False en caso contrario.
+        """
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -125,7 +199,11 @@ class Nivel:
 
 
 
+
     def mostrar_pantalla_muerte(self):
+        """
+        Muestra la pantalla de muerte con un efecto de desvanecimiento.
+        """
         boton_reaparecer, boton_menu, texto_muerte, texto_rect, texto_reaparecer, texto_menu = self.pantalla_muerte()
         pygame.display.flip()
 
@@ -152,6 +230,9 @@ class Nivel:
 
 
     def run(self):
+        """
+        Ejecuta el bucle principal del nivel.
+        """
         while True:
             for evento in pygame.event.get():
                 self.manejar_eventos(evento)
@@ -200,6 +281,9 @@ class Nivel:
 
 
     def mostrar_texto_nueva_oleada(self):
+        """
+        Muestra el texto de nueva oleada en la pantalla.
+        """
         if self.mostrar_nueva_oleada:
             current_time = pygame.time.get_ticks()
             if current_time - self.tiempo_nueva_oleada < 5000:
@@ -211,11 +295,41 @@ class Nivel:
 
 
     def ajustar_camara(self):
+        """
+        Ajusta la cámara para centrarla en el jugador.
+        """
         self.camera.x = self.player.rect.centerx - ANCHO / 2
         self.camera.y = self.player.rect.centery - ALTURA / 2
 
+    def agregar_objeto(self, objeto):
+        """
+        Agrega un objeto al grupo de objetos del nivel.
+
+        :param objeto: Objeto a agregar.
+        """
+        self.objetos.add(objeto)
+        self.sprites.add(objeto)  # Agrega el objeto al grupo de sprites del nivel
+
+    def actualizar(self):
+        """
+        Actualiza todos los sprites del nivel.
+        """
+        self.sprites.update()
+
+    def dibujar(self, pantalla):
+        """
+        Dibuja todos los sprites del nivel en la pantalla.
+
+        :param pantalla: Superficie donde se dibujan los sprites.
+        """
+        # Asegúrate de dibujar los objetos encima de los demás sprites
+        for sprite in self.sprites:
+            pantalla.blit(sprite.image, sprite.rect)
 
     def dibujado_personalizado(self):
+        """
+        Dibuja todos los elementos del nivel, ajustando su posición según la cámara.
+        """
         self.llamar_vizua.fill((0, 0, 0))
 
         background_rect = self.backgroundlevel.get_rect(topleft=(-self.camera.x, -self.camera.y))
@@ -254,7 +368,7 @@ class Nivel:
         self.player.dibujar_cooldownPW(self.llamar_vizua, 20, 50)
 
         puntuacion_text = self.font.render(f"Puntuación: {self.player.puntuacion}", True, (255, 255, 255))
-        self.llamar_vizua.blit(puntuacion_text, (10, 80))
+        self.llamar_vizua.blit(puntuacion_text, (10, -25))
 
         oleada_text = self.font.render(f"Oleada: {self.numero_oleada}", True, (255, 255, 255))
         self.llamar_vizua.blit(oleada_text, (10, 10))
@@ -264,12 +378,24 @@ class Nivel:
 
 
 class VSortCameraGroup(pygame.sprite.Group):
+    """
+    Clase que representa un grupo de sprites con orden de dibujo personalizado.
+
+    Atributos:
+        llamar_vizua (Surface): Superficie donde se dibujan los sprites.
+        background (Surface): Imagen de fondo del nivel.
+    """
     def __init__(self, background):
         super().__init__()
         self.llamar_vizua = pygame.display.get_surface()
         self.background = background
 
     def dibujado_personalizado(self, camera):
+        """
+        Dibuja los sprites del grupo con orden de dibujo personalizado.
+
+        :param camera: Vector de la cámara.
+        """
         self.llamar_vizua.fill((0, 0, 0))
 
         background_rect = self.background.get_rect(topleft=(-camera.x, -camera.y))
